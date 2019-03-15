@@ -1,0 +1,7 @@
+% Start of program
+N00 G00 X0 Y0
+N01 G00 X300 Y300
+N02 G00 X500 Y200
+N03 G00 X400 Y400
+N04 G00 X0 Y0
+% End of program

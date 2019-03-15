@@ -1,0 +1,9 @@
+% Start of program
+N01 G00 X0
+N02 G00 X800
+N03 G00 X0
+N04 G00 X800
+N05 G00 X0
+N06 G00 X800
+N07 G00 X0
+% End of program
