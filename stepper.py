@@ -35,8 +35,8 @@ class Stepper(object):
     def set_mode(self, mode):
         """Set mode of stepper motor"""
         # Do not change mode if input mode equals current mode
-        if self.mode == mode:
-            return
+#        if self.mode == mode:
+#            return
         if mode not in self.modes:
             raise ValueError("Mode not available: {}".format(mode))
         bits = self.modes[self.mode]
@@ -66,7 +66,7 @@ class Stepper(object):
         if not self.debug:
             GPIO.output(self.gpios[0], direction)
 #            GPIO.output(self.gpios[0], False)
-            time.sleep(0.4)
+            time.sleep(0.1)
         self.direction = direction
 
     def step(self, on_time, off_time):

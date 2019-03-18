@@ -6,6 +6,7 @@ import sys
 import time
 from argparse import ArgumentParser
 import ConfigParser
+from multiprocessing import Process
 
 import RPi.GPIO as GPIO
 
@@ -14,6 +15,9 @@ from stepper import Stepper
 from motor_handler import MotorHandler
 from instruction_set import InstructionSet
 #from config import Config
+
+def move(motor_handler, dist, motor):
+    motor_handler.move(dist, motor)
 
 class Router(object):
     def __init__(self, cfg_file, rapid_feed, normal_feed, debug=False):
@@ -75,7 +79,7 @@ class Router(object):
         self.cfg.set('positions', 'z', self.pos_z)
         with open(self.cfg_file, "wb") as configfile:
             self.cfg.write(configfile)
-#        self.cfg.save_cfg()
+        #        self.cfg.save_cfg()
         
     def route(self, instruction_file):
         inst_set = InstructionSet(instruction_file)
@@ -102,15 +106,20 @@ class Router(object):
                     self.pos_z -= delta_z
                     
             print("Move: [X={}mm, Y={}mm, Z={}mm], Microstepping: 1/{}".format(delta_x, delta_y, delta_z, self.s_x.get_mode()))
-            self.motor_handler.move([delta_x, -delta_y, delta_z])
-#            self.s_x = Stepper(1,"Stepper X axis",2,1,self.gpios_x,delta_x,self.debug)
-#            self.s_y = Stepper(2,"Stepper Y axis",2,1,self.gpios_y,delta_y,self.debug)
-#            self.s_z = Stepper(3,"Stepper Z axis",2,1,self.gpios_z,delta_z,self.debug)
+#            self.motor_handler.move([delta_x, -delta_y, delta_z])
+            procs = []
+            px = Process(target=move, args=(self.motor_handler, delta_x, self.s_x))
+            py = Process(target=move, args=(self.motor_handler, -delta_y, self.s_y))
+            pz = Process(target=move, args=(self.motor_handler, delta_z, self.s_z))
+            procs.append(px)
+            procs.append(py)
+            procs.append(pz)
 
-#            self.s_x.move(delta_x)
-#            self.s_y.move(delta_y)
-#            self.s_z.move(delta_z)
-            
+            for proc in procs:
+                proc.start()
+
+            for proc in procs:
+                proc.join()
 
         self.handler.default_output_pins(self.gpios_x)
         self.handler.default_output_pins(self.gpios_y)

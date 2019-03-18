@@ -23,6 +23,7 @@ class MotorHandler(object):
 
     def configure_acc_dec(self, accel_decel):
         c = []
+        cn = 0
         sqrt = math.sqrt
 #        step_frequency = float(self.max_speed) / accel_decel
         step_frequency = 1
@@ -37,23 +38,19 @@ class MotorHandler(object):
         print("Max speed: {}".format(self.max_speed))
         print("Acceleration/Deceleration: {}".format(accel_decel))
         print("Step frequency: {}".format(step_frequency))
-#        c_sum = c0
         for i in range(1, num_steps):
             cn = c0 * (sqrt(i+1) - sqrt(i))
-#            c_sum += cn
             c.append(cn)
-            speed_in_rad_s = step_angle_in_rad / cn
-            speed_in_rpm = speed_in_rad_s * 9.55
-            speed_in_mm_min = speed_in_rpm * 5
-            speed_in_mm_s = speed_in_mm_min / 60
-            speed_in_m_s = speed_in_mm_s / 1000
-#            speed_in_rad_s = accel_decel * c_sum
-#            print "t: {}" % c_sum
-#            print "c{}: {} => Current speed: {}[m/s], {}[mm/min], {}[rad/s]" % (i,cn,speed_in_m_s,speed_in_mm_min,speed_in_rad_s)
-        print("c{}: {} => Final speed: {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".format(i, cn, speed_in_m_s, speed_in_mm_min, speed_in_rad_s, speed_in_rpm))
+        step_s = 1.0 / cn
+        rad_s = step_angle_in_rad / cn
+        rpm = rad_s * 9.55
+        mm_min = rpm * 5
+        mm_s = mm_min / 60
+        m_s = mm_s / 1000
+        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".format(i, cn, step_s, m_s, mm_min, rad_s, rpm))
         return (c, num_steps)
 
-    def calc_steps(self, dist_arr):
+    def calc_steps_round_robin(self, dist_arr):
         steps = []
         for i, dist in enumerate(dist_arr):
             if dist < 0:
@@ -64,8 +61,17 @@ class MotorHandler(object):
             steps.append(int(round(abs(dist) * 40 * self.motors[i].get_mode())))
             print("{} - Moving {}mm (Steps: {})".format(self.motors[i].name, dist, steps[i]))
         return steps
+
+    def calc_steps(self, dist, motor):
+        if dist < 0:
+            motor.set_direction(True)
+        elif dist > 0:
+            motor.set_direction(False)
+        steps = int(round(abs(dist) * 40 * motor.get_mode()))
+        print("{} - Moving {}mm (Steps: {})".format(motor.name, dist, steps))
+        return steps
     
-    def move(self, dist_arr):
+    def move_round_robin(self, dist_arr):
         steps = self.calc_steps(dist_arr)
         max_steps = max(steps)
         steps_left = max_steps
@@ -88,6 +94,25 @@ class MotorHandler(object):
                     steps[j] -= 1
                     if not self.debug:
                         motor.step(on_time, off_time)
+
+    def move(self, dist, motor):
+        steps = self.calc_steps(dist, motor)
+        steps_left = steps
+        step_interval = 0.0002
+
+#        print num_motors
+        for i in range(steps):
+            steps_left -= 1
+
+            if i < self.num_steps_accel:
+                step_interval = self.c_acc[i]
+            if steps_left < self.num_steps_decel:
+                step_interval = self.c_dec[steps_left]
+            on_time = step_interval * 0.5
+            off_time = step_interval - on_time
+
+            if not self.debug:
+                motor.step(on_time, off_time)
 
 def main():
     parser = ArgumentParser(description="Handles motor movement")
