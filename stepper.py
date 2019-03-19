@@ -69,8 +69,8 @@ class Stepper(object):
             time.sleep(0.1)
         self.direction = direction
 
-    def step(self, on_time, off_time):
+    def step(self, delay):
         GPIO.output(self.gpios[1], True)
-        busy_wait(on_time)
+        busy_wait(delay)
         GPIO.output(self.gpios[1], False)
-        busy_wait(off_time)
+        busy_wait(delay)

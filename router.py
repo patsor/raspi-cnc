@@ -68,10 +68,9 @@ class Router(object):
             self.debug
         )
         self.motors = [self.s_x, self.s_y, self.s_z]
-        accel = int(self.cfg.get('general', 'accel'))
-        decel = int(self.cfg.get('general', 'decel'))
-        speed = int(self.cfg.get('general', 'max_speed'))
-        self.motor_handler = MotorHandler(self.motors, accel, decel, speed, self.debug)
+        accel_rate = int(self.cfg.get('general', 'acceleration_rate'))
+        max_velocity = int(self.cfg.get('general', 'max_velocity'))
+        self.motor_handler = MotorHandler(self.motors, accel_rate, max_velocity, self.debug)
         
     def save_positions(self):
         self.cfg.set('positions', 'x', self.pos_x)
@@ -84,33 +83,37 @@ class Router(object):
     def route(self, instruction_file):
         inst_set = InstructionSet(instruction_file)
         for command in inst_set.instructions:
-            delta_x = delta_y = delta_z = 0
+            # vectors for axis movement
+            dx = dy = dz = 0
             for (prefix, val) in command:
                 if prefix == "G":
                     if val == "00":
                         self.s_x.set_mode(self.rapid_feed)
                         self.s_y.set_mode(self.rapid_feed)
                         self.s_z.set_mode(self.rapid_feed)
+                        self.motor_handler.configure_ramp()
                     else:
                         self.s_x.set_mode(self.normal_feed)
                         self.s_y.set_mode(self.normal_feed)
                         self.s_z.set_mode(self.normal_feed)
+                        self.motor_handler.configure_ramp()
                 elif prefix == "X":
-                    delta_x = int(val) - self.pos_x
-                    self.pos_x += delta_x
+                    dx = int(val) - self.pos_x
+                    self.pos_x += dx
                 elif prefix == "Y":
-                    delta_y = int(val) - self.pos_y
-                    self.pos_y += delta_y
+                    dy = int(val) - self.pos_y
+                    self.pos_y += dy
                 elif prefix == "Z":
-                    delta_z = - int(val) + self.pos_z
-                    self.pos_z -= delta_z
+                    dz = -int(val) + self.pos_z
+                    self.pos_z -= dz
                     
-            print("Move: [X={}mm, Y={}mm, Z={}mm], Microstepping: 1/{}".format(delta_x, delta_y, delta_z, self.s_x.get_mode()))
-#            self.motor_handler.move([delta_x, -delta_y, delta_z])
+            print("Move: [X={}mm, Y={}mm, Z={}mm], Microstepping: 1/{}".format(dx, dy, dz, self.s_x.get_mode()))
+            
+            # Starting axis movement as parallel processes
             procs = []
-            px = Process(target=move, args=(self.motor_handler, delta_x, self.s_x))
-            py = Process(target=move, args=(self.motor_handler, -delta_y, self.s_y))
-            pz = Process(target=move, args=(self.motor_handler, delta_z, self.s_z))
+            px = Process(target=move, args=(self.motor_handler, dx, self.s_x))
+            py = Process(target=move, args=(self.motor_handler, -dy, self.s_y))
+            pz = Process(target=move, args=(self.motor_handler, dz, self.s_z))
             procs.append(px)
             procs.append(py)
             procs.append(pz)
