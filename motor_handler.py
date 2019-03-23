@@ -15,8 +15,110 @@ class MotorHandler(object):
         self.motors = motors
         self.accel_rate = accel_rate
         self.max_velocity = max_velocity
-        self.configure_ramp()
+        self.configure_ramp_log()
 
+    def configure_ramp_const(self):
+        spr = 200 * self.motors[0].get_mode()
+        step_angle_in_rad = 2 * math.pi / spr
+        final_velocity = self.max_velocity / 60 * (spr / 5)
+        accel_fact = self.accel_rate / 2
+        c0 = 5.0
+        num_steps = int(round((final_velocity - c0) / accel_fact))
+        c = []
+        cn = 0
+        for i in range(num_steps):
+            cn = 1 / (accel_fact * i + c0)
+            c.append(cn)
+        c_total = sum(c)
+        step_s = 1.0 / cn
+        rad_s = step_angle_in_rad / cn
+        rpm = rad_s * 9.55
+        mm_min = rpm * 5
+        mm_s = mm_min / 60
+        m_s = mm_s / 1000
+        print("Steps per revolution: {}".format(spr))
+        print("Initial step duration c0 [s]: {}".format(c0))
+        print("Number of steps to accelerate/decelerate: {}".format(num_steps))
+        print("Acceleration/Deceleration duration [s]: {}".format(c_total))
+        print("Max speed [mm/min]: {}".format(self.max_velocity))
+        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.accel_rate))
+        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".format(i, cn, step_s, m_s, mm_min, rad_s, rpm))
+        self.c = c
+        self.num_steps_accel = num_steps
+
+    def configure_ramp_exp(self):
+        spr = 200 * self.motors[0].get_mode()
+        step_angle_in_rad = 2 * math.pi / spr
+        final_velocity = self.max_velocity / 60 * (spr / 5)
+        accel_fact = self.accel_rate / 1000.0
+        c0 = 5.0
+        num_steps = int(round(math.log(final_velocity / c0, 10) / math.log(1 + accel_fact, 10)))
+        c = []
+        cn = 0
+        for i in range(num_steps):
+            cn = 1 / (c0 * (1 + accel_fact)**i)
+            c.append(cn)
+        c_total = sum(c)
+        step_s = 1.0 / cn
+        rad_s = step_angle_in_rad / cn
+        rpm = rad_s * 9.55
+        mm_min = rpm * 5
+        mm_s = mm_min / 60
+        m_s = mm_s / 1000
+        print("Steps per revolution: {}".format(spr))
+        print("Initial step duration c0 [s]: {}".format(c0))
+        print("Number of steps to accelerate/decelerate: {}".format(num_steps))
+        print("Acceleration/Deceleration duration [s]: {}".format(c_total))
+        print("Max speed [mm/min]: {}".format(self.max_velocity))
+        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.accel_rate))
+        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".format(i, cn, step_s, m_s, mm_min, rad_s, rpm))
+        self.c = c
+        self.num_steps_accel = num_steps
+
+    def configure_ramp_log(self):
+        # steps per revolution: microstepping mode as factor
+        spr = 200 * self.motors[0].get_mode()
+        # linear movement along the axes per step
+        # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
+        # [rotation_angle = 2 * PI / SPR]
+        step_angle_in_rad = 2 * math.pi / spr
+        # Convert units from mm/min to steps/s
+        cf = self.max_velocity / 60 * (spr / 5)
+        accel_fact = self.accel_rate / 1000.0
+        # Initial velocity in steps/s
+        c0 = 5.0
+        # Calculation of number of steps needed to accelerate/decelerate
+        # c0 = initial_velocity [steps/s]
+        # cf = final velocity [steps/s]
+        # a = acceleration [steps/s^2]
+        # [n_steps = log10(cf^2/c0^2) / log(1 + a)]
+        num_steps = int(round(math.log(cf**2 / c0**2, 10) / math.log(1 + accel_fact, 10)))
+        c = []
+        cn = 0
+        # Calculate step durations in seconds
+        # [cn = (c0/cf + (1+a)^-n) / c0]
+        for i in range(num_steps):
+            cn = (c0 / cf + (1 + accel_fact)**-i) / c0
+            c.append(cn)
+        # Get the total duration of all acceleration steps
+        c_total = sum(c)
+        # Unit conversions
+        step_s = 1.0 / cn
+        rad_s = step_angle_in_rad / cn
+        rpm = rad_s * 9.55
+        mm_min = rpm * 5
+        mm_s = mm_min / 60
+        m_s = mm_s / 1000
+        print("Steps per revolution: {}".format(spr))
+        print("Initial step duration c0 [s]: {}".format(c0))
+        print("Number of steps to accelerate/decelerate: {}".format(num_steps))
+        print("Acceleration/Deceleration duration [s]: {}".format(c_total))
+        print("Max speed [mm/min]: {}".format(self.max_velocity))
+        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.accel_rate))
+        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".format(i, cn, step_s, m_s, mm_min, rad_s, rpm))
+        self.c = c
+        self.num_steps_accel = num_steps
+        
     def configure_ramp(self):
         sqrt = math.sqrt
         # Convert units from mm/min to mm/s

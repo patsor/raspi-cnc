@@ -91,12 +91,12 @@ class Router(object):
                         self.s_x.set_mode(self.rapid_feed)
                         self.s_y.set_mode(self.rapid_feed)
                         self.s_z.set_mode(self.rapid_feed)
-                        self.motor_handler.configure_ramp()
+                        self.motor_handler.configure_ramp_log()
                     else:
                         self.s_x.set_mode(self.normal_feed)
                         self.s_y.set_mode(self.normal_feed)
                         self.s_z.set_mode(self.normal_feed)
-                        self.motor_handler.configure_ramp()
+                        self.motor_handler.configure_ramp_log()
                 elif prefix == "X":
                     dx = int(val) - self.pos_x
                     self.pos_x += dx
