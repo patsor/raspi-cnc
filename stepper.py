@@ -4,10 +4,12 @@ from __future__ import print_function
 
 import time
 import math
+import ConfigParser
 from argparse import ArgumentParser
 
 import RPi.GPIO as GPIO
 
+from gpio_handler import GPIOHandler
 from nicelog import nprint, nflush, ninfo
 
 def busy_wait(dt):
@@ -16,11 +18,12 @@ def busy_wait(dt):
         pass
 
 class Stepper(object):
-    def __init__(self, name, step_angle, travel_per_rev, mode, direction, gpios, a, v, f, debug=False):
+    def __init__(self, name, step_angle, travel_per_rev, mode, motion_type, direction, gpios, a, v, f, debug=False):
         self.name = name
         self.step_angle = step_angle
         self.travel_per_rev = travel_per_rev
         self.mode = mode
+        self.motion_type = motion_type
         self.direction = direction
         self.gpios = gpios
         self.a = a
@@ -62,10 +65,11 @@ class Stepper(object):
         self.set_mode(mode, initial=True)
         self.set_direction(direction, initial=True)
         # Calculate ramping profiles for all possible modes
-        self.c = {}
+        self.motion_type = motion_type
+        self.t_accel = {}
         self.n_accel = {}
-        for key in self.modes:
-            (self.c[key], self.n_accel[key]) = self.configure_ramp(key)
+        self.t_accel["traverse"], self.n_accel["traverse"] = self.configure_ramp(self.v)
+        self.t_accel["feed"], self.n_accel["feed"] = self.configure_ramp(self.f)
 
     def get_mode(self):
         """Get mode of stepper motor"""
@@ -88,6 +92,12 @@ class Stepper(object):
                 time.sleep(0.1)
         self.mode = mode
         nflush(text)
+
+    def get_motion_type(self):
+        return self.motion_type
+        
+    def set_motion_type(self, motion_type):
+        self.motion_type = motion_type
 
     def get_direction(self):
         """Get direction of stepper motor"""
@@ -115,7 +125,7 @@ class Stepper(object):
     def calc_steps(self, dist):
         text="{} - Caluclating number of steps".format(self.name)
         nprint(text)
-        steps = int(round(abs(dist) * 40.0 * self.mode))
+        steps = int(round(abs(dist) * 360.0 / self.step_angle / self.travel_per_rev * self.mode))
         nflush(text)
         ninfo("{} steps required to reach destination".format(steps))
         return steps
@@ -130,38 +140,38 @@ class Stepper(object):
         for i in range(steps):
             steps_left -= 1
 
-            if i < self.n_accel[self.mode]:
-                step_interval = self.c[self.mode][i]
-            if steps_left < self.n_accel[self.mode]:
-                step_interval = self.c[self.mode][steps_left]
+            if i < self.n_accel[self.motion_type]:
+                step_interval = self.t_accel[self.motion_type][i]
+            if steps_left < self.n_accel[self.motion_type]:
+                step_interval = self.t_accel[self.motion_type][steps_left]
             delay = step_interval * 0.5
             
             if not self.debug:
                 self.step(delay)
-            else:
-                busy_wait(step_interval)
+#            else:
+#                busy_wait(step_interval)
         nflush(text)
 
-    def configure_ramp(self, mode, method="trapezoidal"):
+    def configure_ramp(self, vm, method="trapezoidal"):
         if method == "trapezoidal":
-            return (self._configure_ramp_trapezoidal(mode))
+            return (self._configure_ramp_trapezoidal(vm))
         elif method == "paraboloid":
-            return (self._configure_ramp_paraboloid(mode))
+            return (self._configure_ramp_paraboloid(vm))
 
-    def _configure_ramp_trapezoidal(self, mode):
-        text="{} - Generating trapezoidal ramp profile".format(self.name)
+    def _configure_ramp_trapezoidal(self, vm):
+        text="{} - Generating trapezoidal ramp profile [vm = {}".format(self.name, vm)
         nprint(text)
         sqrt = math.sqrt
         # steps per revolution: microstepping mode as factor
-        spr = 200 * mode
+        spr = 360.0 / self.step_angle * self.mode
         # Number of steps it takes to move axis 1mm
-        steps_per_mm = spr / 5
+        steps_per_mm = spr / self.travel_per_rev
         # linear movement along the axes per step
         # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
         # [rotation_angle = 2 * PI / SPR]
         step_angle_in_rad = 2 * math.pi / spr
         # Convert target velocity from mm/min to rad/s
-        cf = self.v / 60 * steps_per_mm * step_angle_in_rad
+        cf = vm / 60 * steps_per_mm * step_angle_in_rad
         # Convert acceleration from mm/s^2 to rad/s^2
         accel_fact = self.a * steps_per_mm * step_angle_in_rad
         # Calculation of number of steps needed to accelerate/decelerate
@@ -192,13 +202,13 @@ class Stepper(object):
 #        print("Initial step duration c0 [s]: {}".format(c0))
 #        print("Number of steps to accelerate/decelerate: {}".format(num_steps))
 #        print("Acceleration/Deceleration duration [s]: {}".format(c_total))
-#        print("Max speed [mm/min]: {}".format(self.v))
+#        print("Max speed [mm/min]: {}".format(v_max))
 #        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.a))
 #        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".format(num_steps, cn, step_s, m_s, mm_min, rad_s, rpm))
         nflush(text)
         return (c, num_steps)
         
-    def _configure_ramp_paraboloid(self):
+    def _configure_ramp_paraboloid(self, vm):
         text="{} - Generating trapezoidal ramp profile".format(self.name)
         nprint(text)
         sqrt = math.sqrt
@@ -211,9 +221,9 @@ class Stepper(object):
         # [rotation_angle = 2 * PI / SPR]
         step_angle_in_rad = 2 * math.pi / spr
         # Convert target velocity from mm/min to rad/s
-        cf = self.max_velocity / 60 * steps_per_mm * step_angle_in_rad
+        cf = vm / 60 * steps_per_mm * step_angle_in_rad
         # Convert acceleration from mm/s^2 to rad/s^2
-        accel_fact = self.accel_rate * steps_per_mm * step_angle_in_rad
+        accel_fact = self.a * steps_per_mm * step_angle_in_rad
         
         # Calculation of initial step duration during acceleration/deceleration phase
         # [c0 = (f=1) * sqrt(2 * rotation_angle / a)]
@@ -245,9 +255,56 @@ class Stepper(object):
 #        print("Initial step duration c0 [s]: {}".format(c0))
 #        print("Number of steps to accelerate/decelerate: {}".format(n2))
 #        print("Acceleration/Deceleration duration [s]: {}".format(c_total))
-#        print("Max speed [mm/min]: {}".format(self.max_velocity))
-#        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.accel_rate))
+#        print("Max speed [mm/min]: {}".format(vm))
+#        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.a))
 #        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".              format(i, cn, step_s, m_s, mm_min, rad_s, rpm))
         nflush(text)
         return (c, n2)
         
+def main():
+    parser = ArgumentParser(description="Plans axis movements")
+    parser.add_argument("-s", "--distance", dest="distance", help="Specify distance for the motor to move", required=True)
+    parser.add_argument("-d", "--direction", dest="direction", choices=["CW", "CCW"], help="Specify direction of movement", default="CW")
+    parser.add_argument("-a", "--axis", dest="axis", choices=["X", "Y", "Z"], help="Specify axis", required=True)
+    parser.add_argument("-c", "--config", dest="config", help="Specify config")
+    args = parser.parse_args()
+
+    cfg = ConfigParser.ConfigParser()
+    cfg.read(args.config)                            
+                        
+    name = "Stepper"
+    step_angle = 1.8
+    travel_per_rev = 5.0
+    mode = 1
+    motion_type = "traverse"
+    direction = args.direction
+    gpios = [int(x) for x in cfg.get(args.axis, 'gpio_pins').split(",")]
+    a = 60.0
+    v = 800.0
+    f = 400.0
+    debug=False
+    
+    handler = GPIOHandler(GPIO.BOARD, False, debug)        
+    handler.set_output_pins(gpios)
+    handler.default_output_pins(gpios)
+        
+    s = Stepper(
+        name,
+        step_angle,
+        travel_per_rev,
+        mode,
+        motion_type,
+        direction,
+        gpios,
+        a,
+        v,
+        f,
+        debug
+    )
+    s.move(float(args.distance))
+        
+    handler.default_output_pins(gpios)
+    handler.cleanup()
+
+if __name__ == '__main__':
+    main()

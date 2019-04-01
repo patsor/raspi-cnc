@@ -29,7 +29,11 @@ class Router(object):
         self.configure_motors()
 
     def configure_motors(self):
-        self.gpios = self.pos = {}
+        self.gpios = {}
+        self.pos = {}
+        self.pol = {}
+        self.lim = {}
+        self.motors = {}
         for axis in self.axes:
             self.gpios[axis] = [int(x) for x in self.cfg.get(axis, 'gpio_pins').split(",")]
 
@@ -37,21 +41,26 @@ class Router(object):
             self.handler.default_output_pins(self.gpios[axis])
 
             self.pos[axis] = self.cfg.getfloat(axis, 'position')
+            self.pol[axis] = self.cfg.getint(axis, 'polarity')
         
             sa = self.cfg.getfloat(axis, 'step_angle')
             tpr = self.cfg.getfloat(axis, 'travel_per_rev')
-            mi = self.cfg.getfloat(axis, 'microstepping_mode')
+            mi = self.cfg.getint(axis, 'microstepping_mode')
             a = self.cfg.getfloat(axis, 'acceleration_rate')
             v = self.cfg.getfloat(axis, 'max_velocity')
             f = self.cfg.getfloat(axis, 'max_feed_rate')
 
-            self.lim = self.cfg.getfloat(axis, 'max_position')
+            self.lim[axis] = (
+                self.cfg.getfloat(axis, 'min_travel'),
+                self.cfg.getfloat(axis, 'max_travel')
+            )
 
             s = Stepper(
                 "Stepper {} axis".format(axis),
                 sa,
                 tpr,
                 mi,
+                "traverse",
                 "CW",
                 self.gpios[axis],
                 a,
@@ -59,7 +68,7 @@ class Router(object):
                 f,
                 self.debug
             )
-            self.motors.append(s)
+            self.motors[axis] = s
         
     def save_positions(self):
         for axis in self.axes:
@@ -70,44 +79,47 @@ class Router(object):
     def route(self, instruction_file):
         inst_set = InstructionSet(instruction_file, self.lim)
         for command in inst_set.instructions:
+#            print(command)
             # vectors for axis movement
-            x = y = z = 0.0
-            dx = dy = dz = 0.0
+            delta = {}
+            for axis in self.axes:
+                delta[axis] = 0.0
             for (prefix, val) in command:
                 if prefix == "G":
                     if val == "00":
-                        for motor in self.motors:
-                            motor.set_motion_type("traverse")
+                        for axis in self.axes:
+                            self.motors[axis].set_motion_type("traverse")
                     else:
-                        for motor in self.motors:
-                            motor.set_motion_type("feed")
+                        for axis in self.axes:
+                            self.motors[axis].set_motion_type("feed")
                 elif prefix == "X":
-                    x = float(val)
-                    dx = x - self.pos[prefix]
+                    delta[prefix] = float(val) - self.pos[prefix]
                 elif prefix == "Y":
-                    y = float(val)
-                    dy = y - self.pos[prefix]
+                    delta[prefix] = float(val) - self.pos[prefix]
                 elif prefix == "Z":
-                    z = float(val)
-                    dz = -z + self.pos[prefix]
-            delta = [dx, dy, dz]
+                    delta[prefix] = float(val) - self.pos[prefix]
             text="Calculating motion vector"
             nprint(text)
-#            print("Motion Vector:")
-#            print("(x)   (dx) = ({:>6.2f})   ({:>7.2f})   ({:>6.2f})".format(self.pos_x, dx, x))
-#            print("(y) + (dy) = ({:>6.2f}) + ({:>7.2f}) = ({:>6.2f})".format(self.pos_y, dy, y))
-#            print("(z)   (dz) = ({:>6.2f})   ({:>7.2f})   ({:>6.2f})".format(self.pos_z, dz, z))
+#            print("(x)   (dx) = ({:>6.2f})   ({:>7.2f})   ({:>6.2f})".format(self.pos["X"], delta["X"], target["X"]))
+#            print("(y) + (dy) = ({:>6.2f}) + ({:>7.2f}) = ({:>6.2f})".format(self.pos["Y"], delta["Y"], target["Y"]))
+#            print("(z)   (dz) = ({:>6.2f})   ({:>7.2f})   ({:>6.2f})".format(self.pos["Z"], delta["Z"], target["Z"]))
             nflush(text)
             # Starting axis movement as parallel processes
             procs = []
-            for i in range(3):
-                if delta[i] < 0:
-                    self.motors[i].set_direction("CCW")
-                elif delta[i] > 0:
-                    self.motors[i].set_direction("CW")
+            for axis in self.axes:
+                if delta[axis] < 0:
+                    if self.pol[axis]:
+                        self.motors[axis].set_direction("CW")
+                    else:
+                        self.motors[axis].set_direction("CCW")
+                elif delta[axis] > 0:
+                    if self.pol[axis]:
+                        self.motors[axis].set_direction("CCW")
+                    else:
+                        self.motors[axis].set_direction("CW")
                 else:
                     continue
-                proc = Process(target=move, args=(self.motors[i], delta[i]))
+                proc = Process(target=move, args=(self.motors[axis], delta[axis]))
                 procs.append(proc)
 
             for proc in procs:
@@ -116,13 +128,11 @@ class Router(object):
             for proc in procs:
                 proc.join()
 
-            self.pos_x += dx
-            self.pos_y += dy
-            self.pos_z -= dz
+            for axis in self.axes:
+                self.pos[axis] += delta[axis]
 
-        self.handler.default_output_pins(self.gpios_x)
-        self.handler.default_output_pins(self.gpios_y)
-        self.handler.default_output_pins(self.gpios_z)
+        for axis in self.axes:
+            self.handler.default_output_pins(self.gpios[axis])
         self.handler.cleanup()
         
 
