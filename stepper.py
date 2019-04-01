@@ -27,22 +27,41 @@ class Stepper(object):
         self.v = v
         self.f = f
         self.debug = debug
+        # Microstepping modes of DRV8825
+        # Microstepping mode 1/n: M2, M1, M0
+        # Example: 1/2 (Half step): M2=0, M1=0, M0=1
         self.modes = {
-            1:[0, 0, 0],
-            2:[0, 0, 1],
-            4:[0, 1, 0],
-            8:[0, 1, 1],
-            16:[1, 0, 0],
-            32:[1, 1, 1]
-        }
-
-        self.dirs = {
-            "CW":False,
-            "CCW":True
+            1: (0, 0, 0),
+            2: (0, 0, 1),
+            4: (0, 1, 0),
+            8: (0, 1, 1),
+            16: (1, 0, 0),
+            32: (1, 1, 0)
         }
         
-        self.set_mode(mode, True)
-        self.set_direction(direction, True)
+        # Microstepping modes of TB67S249FTG
+        # Microstepping mode 1/n: M2, M1, M0
+        #self.modes = {
+        #    0: (0, 0, 0),
+        #    1: (1, 0, 0),
+        # non-circular half step (100% current, high torque)
+        #    2: (0, 1, 0),
+        #    4: (1, 1, 0),
+        # circular half step (71% current, medium torque)
+        ##    2: (0, 0, 1),
+        #    8: (1, 0, 1),
+        #    16: (0, 1, 1),
+        #    32: (1, 1, 1)
+        #}
+
+        self.dirs = {
+            "CW": False,
+            "CCW": True
+        }
+        
+        self.set_mode(mode, initial=True)
+        self.set_direction(direction, initial=True)
+        # Calculate ramping profiles for all possible modes
         self.c = {}
         self.n_accel = {}
         for key in self.modes:
@@ -65,7 +84,7 @@ class Stepper(object):
 
         if not self.debug:
             for i in range(3):
-                GPIO.output(self.gpios[i+2], bits[0])
+                GPIO.output(self.gpios[i+2], bits[i])
                 time.sleep(0.1)
         self.mode = mode
         nflush(text)
