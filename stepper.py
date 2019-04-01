@@ -33,7 +33,7 @@ class Stepper(object):
             4: (0, 1, 0),
             8: (0, 1, 1),
             16: (1, 0, 0),
-            32: (1, 1, 1)
+            32: (1, 1, 0)
         }
         
         # Microstepping modes of TB67S249FTG
