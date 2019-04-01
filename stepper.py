@@ -16,13 +16,16 @@ def busy_wait(dt):
         pass
 
 class Stepper(object):
-    def __init__(self, name, mode, direction, gpios, a, v, debug=False):
+    def __init__(self, name, step_angle, travel_per_rev, mode, direction, gpios, a, v, f, debug=False):
         self.name = name
+        self.step_angle = step_angle
+        self.travel_per_rev = travel_per_rev
         self.mode = mode
         self.direction = direction
         self.gpios = gpios
         self.a = a
         self.v = v
+        self.f = f
         self.debug = debug
         self.modes = {
             1:[0, 0, 0],

@@ -24,86 +24,51 @@ class Router(object):
         self.cfg = ConfigParser.ConfigParser()
         self.cfg.read(cfg_file)
         self.debug = debug
+        self.axes = ["X", "Y", "Z"]
         self.handler = GPIOHandler(GPIO.BOARD, False, debug)
         self.configure_motors()
 
     def configure_motors(self):
-        self.gpios_x = [int(x) for x in self.cfg.get('x', 'gpio_pins').split(",")]
-        self.gpios_y = [int(x) for x in self.cfg.get('y', 'gpio_pins').split(",")]
-        self.gpios_z = [int(x) for x in self.cfg.get('z', 'gpio_pins').split(",")]
+        self.gpios = self.pos = {}
+        for axis in self.axes:
+            self.gpios[axis] = [int(x) for x in self.cfg.get(axis, 'gpio_pins').split(",")]
 
-        self.handler.set_output_pins(self.gpios_x)
-        self.handler.set_output_pins(self.gpios_y)
-        self.handler.set_output_pins(self.gpios_z)
-        self.handler.default_output_pins(self.gpios_x)
-        self.handler.default_output_pins(self.gpios_y)
-        self.handler.default_output_pins(self.gpios_z)
+            self.handler.set_output_pins(self.gpios[axis])
+            self.handler.default_output_pins(self.gpios[axis])
 
-        self.pos_x = self.cfg.getfloat('x', 'position')
-        self.pos_y = self.cfg.getfloat('y', 'position')
-        self.pos_z = self.cfg.getfloat('z', 'position')
-
-        self.mx_normal = self.cfg.getint('x', 'normal_mode')
-        self.mx_rapid = self.cfg.getint('x', 'rapid_mode')
-        self.my_normal = self.cfg.getint('y', 'normal_mode')
-        self.my_rapid = self.cfg.getint('y', 'rapid_mode')
-        self.mz_normal = self.cfg.getint('z', 'normal_mode')
-        self.mz_rapid = self.cfg.getint('z', 'rapid_mode')
-        ax = self.cfg.getfloat('x', 'acceleration_rate')
-        ay = self.cfg.getfloat('y', 'acceleration_rate')
-        az = self.cfg.getfloat('z', 'acceleration_rate')
-        vx = self.cfg.getfloat('x', 'max_velocity')
-        vy = self.cfg.getfloat('y', 'max_velocity')
-        vz = self.cfg.getfloat('z', 'max_velocity')
-
-        self.x_lim = self.cfg.getfloat('x', 'max_position')
-        self.y_lim = self.cfg.getfloat('y', 'max_position')
-        self.z_lim = self.cfg.getfloat('z', 'max_position')
-
-        self.s_x = Stepper(
-            "Stepper X axis",
-            self.mx_normal,
-            "CW",
-            self.gpios_x,
-            ax,
-            vx,
-            self.debug
-        )
-        self.s_y = Stepper(
-            "Stepper Y axis",
-            self.my_normal,
-            "CW",
-            self.gpios_y,
-            ay,
-            vy,
-            self.debug
-        )
-        self.s_z = Stepper(
-            "Stepper Z axis",
-            self.mz_normal,
-            "CW",
-            self.gpios_z,
-            az,
-            vz,
-            self.debug
-        )
-
-#        self.s_x.configure_ramp()
-#        self.s_y.configure_ramp()
-#        self.s_z.configure_ramp()
+            self.pos[axis] = self.cfg.getfloat(axis, 'position')
         
-        self.motors = [self.s_x, self.s_y, self.s_z]
+            sa = self.cfg.getfloat(axis, 'step_angle')
+            tpr = self.cfg.getfloat(axis, 'travel_per_rev')
+            mi = self.cfg.getfloat(axis, 'microstepping_mode')
+            a = self.cfg.getfloat(axis, 'acceleration_rate')
+            v = self.cfg.getfloat(axis, 'max_velocity')
+            f = self.cfg.getfloat(axis, 'max_feed_rate')
+
+            self.lim = self.cfg.getfloat(axis, 'max_position')
+
+            s = Stepper(
+                "Stepper {} axis".format(axis),
+                sa,
+                tpr,
+                mi,
+                "CW",
+                self.gpios[axis],
+                a,
+                v,
+                f,
+                self.debug
+            )
+            self.motors.append(s)
         
     def save_positions(self):
-        self.cfg.set('x', 'position', self.pos_x)
-        self.cfg.set('y', 'position', self.pos_y)
-        self.cfg.set('z', 'position', self.pos_z)
+        for axis in self.axes:
+            self.cfg.set(axis, 'position', self.pos[axis])
         with open(self.cfg_file, "wb") as configfile:
             self.cfg.write(configfile)
-        #        self.cfg.save_cfg()
         
     def route(self, instruction_file):
-        inst_set = InstructionSet(instruction_file, self.x_lim, self.y_lim, self.z_lim)
+        inst_set = InstructionSet(instruction_file, self.lim)
         for command in inst_set.instructions:
             # vectors for axis movement
             x = y = z = 0.0
@@ -111,25 +76,20 @@ class Router(object):
             for (prefix, val) in command:
                 if prefix == "G":
                     if val == "00":
-                        self.s_x.set_mode(self.mx_rapid)
-                        self.s_y.set_mode(self.my_rapid)
-                        self.s_z.set_mode(self.mz_rapid)
+                        for motor in self.motors:
+                            motor.set_motion_type("traverse")
                     else:
-                        self.s_x.set_mode(self.mx_normal)
-                        self.s_y.set_mode(self.my_normal)
-                        self.s_z.set_mode(self.mz_normal)
-#                        self.s_x.configure_ramp()
-#                        self.s_y.configure_ramp()
-#                        self.s_z.configure_ramp()
+                        for motor in self.motors:
+                            motor.set_motion_type("feed")
                 elif prefix == "X":
                     x = float(val)
-                    dx = x - self.pos_x
+                    dx = x - self.pos[prefix]
                 elif prefix == "Y":
                     y = float(val)
-                    dy = y - self.pos_y
+                    dy = y - self.pos[prefix]
                 elif prefix == "Z":
                     z = float(val)
-                    dz = -z + self.pos_z
+                    dz = -z + self.pos[prefix]
             delta = [dx, dy, dz]
             text="Calculating motion vector"
             nprint(text)

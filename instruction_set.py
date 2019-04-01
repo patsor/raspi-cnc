@@ -7,11 +7,9 @@ from nicelog import nprint, nflush
 __version__ = "0.1"
 
 class InstructionSet(object):
-    def __init__(self, infile, max_x, max_y, max_z):
+    def __init__(self, infile, limits):
         self.infile = infile
-        self.max_x = max_x
-        self.max_y = max_y
-        self.max_z = max_z
+        self.limits = limits
         self.valid_g_codes = {
             "00": "Rapid positioning",
             "01": "Linear interpolation"
@@ -54,14 +52,17 @@ class InstructionSet(object):
                     return (101, "Invalid operation")
             elif prefix == "X":
                 val = float(val)
-                if val < 0 or val > self.max_x:
-                    return (102, "X value not in range (0,{}): {}".format(self.max_x, val))
+                x_lim = self.limits[prefix]
+                if val < 0 or val > self.limits[prefix.lower()]:
+                    return (102, "X value not in range (0,{}): {}".format(x_lim, val))
             elif prefix == "Y":
                 val = float(val)
-                if val < 0 or val > self.max_y:
-                    return (103, "Y value not in range (0,{}): {}".format(self.max_y, val))
+                y_lim = self.limits[prefix]
+                if val < 0 or val > y_lim:
+                    return (103, "Y value not in range (0,{}): {}".format(y_lim, val))
             elif prefix == "Z":
                 val = float(val)
-                if val > 0 or val < self.max_z:
-                    return (104, "Z value not in range (0,{}): {}".format(self.max_z, val))
+                z_lim = self.limits[prefix]
+                if val > 0 or val < z_lim:
+                    return (104, "Z value not in range (0,{}): {}".format(z_lim, val))
         return (200, "Ok")
