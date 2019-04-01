@@ -62,7 +62,7 @@ class Stepper(object):
 
         if not self.debug:
             for i in range(3):
-                GPIO.output(self.gpios[i+2], bits[0])
+                GPIO.output(self.gpios[i+2], bits[i])
                 time.sleep(0.1)
         self.mode = mode
         nflush(text)
