@@ -41,8 +41,11 @@ class Stepper(object):
         #self.modes = {
         #    0: (0, 0, 0),
         #    1: (1, 0, 0),
+        # non-circular half step (100% current, high torque)
         #    2: (0, 1, 0),
         #    4: (1, 1, 0),
+        # circular half step (71% current, medium torque)
+        ##    2: (0, 0, 1),
         #    8: (1, 0, 1),
         #    16: (0, 1, 1),
         #    32: (1, 1, 1)
