@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+from nicelog import nprint, nflush
+
 import RPi.GPIO as GPIO
 
 class GPIOHandler(object):
@@ -11,43 +13,59 @@ class GPIOHandler(object):
         self.set_warnings(warnings)
 
     def set_mode(self, mode):
+        text=""
         if mode:
-            print("Setting GPIO Mode: BOARD")
+            text="Setting GPIO Mode: BOARD"
+            nprint(text, "info")
         else:
-            print("Setting GPIO Mode: BCM")
+            text="Setting GPIO Mode: BCM"
+            nprint(text, "info")
         if not self.debug:
             GPIO.setmode(mode)
+        nflush(text, "info")
 
     def set_warnings(self,warnings):
+        text=""
         if warnings:
-            print("Activate GPIO Warnings")
+            text="Activate GPIO Warnings"
+            nprint(text, "info")
         else:
-            print("Deactivate GPIO Warnings")
+            text="Deactivate GPIO Warnings"
+            nprint(text, "info")
         if not self.debug:
             GPIO.setwarnings(False)
+        nflush(text, "info")
 
     def set_output_pins(self, gpios):
-        print("Setting GPIO output pins: {}".format(sorted(gpios)))
+        text="Setting GPIO output pins: {}".format(sorted(gpios))
+        nprint(text)
         if not self.debug:
             for gpio in gpios:
                 GPIO.setup(gpio, GPIO.OUT)
+        nflush(text)
 
-    def set_input_pins(self,gpios):
-        print("Setting GPIO input pins: {}".format(gpios))
+    def set_input_pins(self, gpios):
+        text="Setting GPIO input pins: {}".format(gpios)
+        nprint(text)
         if not self.debug:
             for gpio in gpios:
                 GPIO.setup(gpio, GPIO.IN)
+        nflush(text)
 
     def default_output_pins(self,gpios):
-        print("Defaulting GPIO output pins: {}".format(sorted(gpios)))
+        text="Defaulting GPIO output pins: {}".format(sorted(gpios))
+        nprint(text)
         if not self.debug:
             for gpio in gpios:
                 GPIO.output(gpio, False)
+        nflush(text)
 
     def cleanup(self):
-        print("Cleaning up GPIOs")
+        text="Cleaning up GPIOs"
+        nprint(text)
         if not self.debug:
             GPIO.cleanup()
+        nflush(text)
 
 
 def main():

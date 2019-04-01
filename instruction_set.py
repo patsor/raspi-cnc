@@ -1,10 +1,17 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
+from nicelog import nprint, nflush
+
 __version__ = "0.1"
 
 class InstructionSet(object):
-    def __init__(self, infile):
+    def __init__(self, infile, max_x, max_y, max_z):
         self.infile = infile
+        self.max_x = max_x
+        self.max_y = max_y
+        self.max_z = max_z
         self.valid_g_codes = {
             "00": "Rapid positioning",
             "01": "Linear interpolation"
@@ -13,6 +20,8 @@ class InstructionSet(object):
         
     def read_gfile(self):
         commands = []
+        text="Checking g-code file"
+        nprint(text)
         with open(self.infile) as inf:
             for i, line in enumerate(inf):
                 if line.startswith("%"):
@@ -23,27 +32,36 @@ class InstructionSet(object):
                     prefix = ele[0]
                     val = ele[1:]
                     code_blocks.append((prefix, val))
-                if self.is_valid(code_blocks):
+                response_code, msg = self.validate(code_blocks)
+                if response_code == 200:
                     commands.append(code_blocks)
                 else:
-                    raise ValueError("Invalid Instruction in line {} of {}".format(i, self.infile))
+                    raise ValueError("Invalid Instruction in line {} of {}:\n ---> {}".format(i+1, self.infile, msg))
+        nflush(text)
+        text2 ="Loaded {} instructions".format(len(commands)) 
+        nprint(text2, "info")
+        nflush(text2, "info")
         return commands
                 
-    def is_valid(self, code_blocks):
+    def validate(self, code_blocks):
         for (prefix, val) in code_blocks:
             if prefix == "N":
-                if int(val) < 0:
-                    return False
+                val = int(val)
+                if val < 0:
+                    return (100, "N value below zero")
             elif prefix == "G":
                 if val not in self.valid_g_codes:
-                    return False
+                    return (101, "Invalid operation")
             elif prefix == "X":
-                if int(val) < 0:
-                    return False
+                val = float(val)
+                if val < 0 or val > self.max_x:
+                    return (102, "X value not in range (0,{}): {}".format(self.max_x, val))
             elif prefix == "Y":
-                if int(val) < 0:
-                    return False
+                val = float(val)
+                if val < 0 or val > self.max_y:
+                    return (103, "Y value not in range (0,{}): {}".format(self.max_y, val))
             elif prefix == "Z":
-                if int(val) > 0:
-                    return False
-        return True
+                val = float(val)
+                if val > 0 or val < self.max_z:
+                    return (104, "Z value not in range (0,{}): {}".format(self.max_z, val))
+        return (200, "Ok")
