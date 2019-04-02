@@ -27,6 +27,8 @@ class Router(object):
         self.logger.info("Parsing Config File [{}]".format(cfg_file))
         with open(cfg_file) as main_cfg:
             self.cfg = json.load(main_cfg)
+        self.coord_file = "coord.json"
+        self.coordinates = self.load_coordinates(self.coord_file)
         self.debug = debug
 
         self.axes = ["X", "Y", "Z"]
@@ -35,7 +37,6 @@ class Router(object):
 
     def configure_motors(self):
         self.gpios = {}
-        self.pos = {}
         self.pol = {}
         self.lim = {}
         self.motors = {}
@@ -47,7 +48,7 @@ class Router(object):
             self.handler.set_output_pins(self.gpios[axis].values())
             self.handler.default_output_pins(self.gpios[axis].values())
 
-            self.pos[axis] = axis_cfg['position']
+#            self.pos[axis] = axis_cfg['position']
             self.pol[axis] = axis_cfg['polarity']
         
             step_angle = axis_cfg['step_angle']
@@ -73,12 +74,16 @@ class Router(object):
                 self.debug
             )
             self.motors[axis] = s
-        
-    def save_positions(self):
-        for axis in self.axes:
-            self.cfg["axes"][axis]["position"] = self.pos[axis]
-        with open(self.cfg_file, "w") as file_obj:
-            json.dump(self.cfg, file_obj, indent=4, sort_keys=True)
+
+    def load_coordinates(self, coord_file):
+        with open(coord_file) as coord:
+            return json.load(coord)
+            
+    def save_coordinates(self):
+#        for axis in self.axes:
+#            self.cfg[axis]["position"] = self.coordinates[axis]
+        with open(self.coord_file, "w") as file_obj:
+            json.dump(self.coordinates, file_obj, indent=4, sort_keys=True)
         
     def route(self, gcode_file):
         gcode = GCodeParser(gcode_file, self.lim)
@@ -98,11 +103,11 @@ class Router(object):
                         for axis in self.axes:
                             self.motors[axis].set_motion_type("feed")
                 elif prefix == "X":
-                    delta[prefix] = float(val) - self.pos[prefix]
+                    delta[prefix] = float(val) - self.coordinates[prefix]
                 elif prefix == "Y":
-                    delta[prefix] = float(val) - self.pos[prefix]
+                    delta[prefix] = float(val) - self.coordinates[prefix]
                 elif prefix == "Z":
-                    delta[prefix] = float(val) - self.pos[prefix]
+                    delta[prefix] = float(val) - self.coordinates[prefix]
             self.logger.debug("Calculating motion vector")
 #            print("(x)   (dx) = ({:>6.2f})   ({:>7.2f})   ({:>6.2f})".format(self.pos["X"], delta["X"], target["X"]))
 #            print("(y) + (dy) = ({:>6.2f}) + ({:>7.2f}) = ({:>6.2f})".format(self.pos["Y"], delta["Y"], target["Y"]))
@@ -132,7 +137,7 @@ class Router(object):
                 proc.join()
 
             for axis in self.axes:
-                self.pos[axis] += delta[axis]
+                self.coordinates[axis] += delta[axis]
 
         for axis in self.axes:
             self.handler.default_output_pins(self.gpios[axis].values())
@@ -145,15 +150,13 @@ def main():
     parser.add_argument('-i', '--gcode', dest='gcode', help='input g-code file', required=True)
     parser.add_argument('-d', '--debug', dest='debug', action='store_true', help='Set debug mode')
     args = parser.parse_args()
-#    debug = args.debug
-    instruction_file = args.gcode
     # GPIOs: [DIR,STP,M0,M1,M2]
 #    cfg = Config("settings.cfg")
     cfg_file = "config.json"
 
     router = Router(cfg_file, args.debug)
-    router.route(instruction_file)
-    router.save_positions()
+    router.route(args.gcode)
+    router.save_coordinates()
 
 
 if __name__ == '__main__':

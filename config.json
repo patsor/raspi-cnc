@@ -17,7 +17,6 @@
             "max_velocity": 1200.0, 
             "microsteps": 1, 
             "polarity": false, 
-            "position": 72.5, 
             "step_angle": 1.8, 
             "travel_per_rev": 5
         }, 
@@ -38,7 +37,6 @@
             "max_velocity": 800.0, 
             "microsteps": 1, 
             "polarity": true, 
-            "position": 90.0, 
             "step_angle": 1.8, 
             "travel_per_rev": 5
         }, 
@@ -59,7 +57,6 @@
             "max_velocity": 100.0, 
             "microsteps": 2, 
             "polarity": true, 
-            "position": 0.0, 
             "step_angle": 1.8, 
             "travel_per_rev": 5
         }
