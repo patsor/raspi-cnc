@@ -1,0 +1,70 @@
+{
+    "axes": {
+        "X": {
+            "acceleration_rate": 80.0, 
+            "gpio": {
+                "dir": 7, 
+                "m0": 8, 
+                "m1": 10, 
+                "m2": 12, 
+                "step": 11
+            }, 
+            "limits": [
+                0.0, 
+                800.0
+            ], 
+            "max_feed_rate": 500.0, 
+            "max_velocity": 1200.0, 
+            "microsteps": 1, 
+            "polarity": false, 
+            "position": 72.5, 
+            "step_angle": 1.8, 
+            "travel_per_rev": 5
+        }, 
+        "Y": {
+            "acceleration_rate": 80.0, 
+            "gpio": {
+                "dir": 13, 
+                "m0": 16, 
+                "m1": 18, 
+                "m2": 19, 
+                "step": 15
+            }, 
+            "limits": [
+                51.0, 
+                400.0
+            ], 
+            "max_feed_rate": 400.0, 
+            "max_velocity": 800.0, 
+            "microsteps": 1, 
+            "polarity": true, 
+            "position": 90.0, 
+            "step_angle": 1.8, 
+            "travel_per_rev": 5
+        }, 
+        "Z": {
+            "acceleration_rate": 50.0, 
+            "gpio": {
+                "dir": 21, 
+                "m0": 22, 
+                "m1": 24, 
+                "m2": 26, 
+                "step": 23
+            }, 
+            "limits": [
+                0.0, 
+                -20.0
+            ], 
+            "max_feed_rate": 50.0, 
+            "max_velocity": 100.0, 
+            "microsteps": 2, 
+            "polarity": true, 
+            "position": 0.0, 
+            "step_angle": 1.8, 
+            "travel_per_rev": 5
+        }
+    }, 
+    "general": {
+        "logfile": "main.log"
+    }
+}

@@ -2,13 +2,14 @@
 
 from __future__ import print_function
 
-from nicelog import nprint, nflush
+import logging
 
 __version__ = "0.1"
 
-class InstructionSet(object):
+class GCodeParser(object):
     def __init__(self, infile, axis_limits):
         self.infile = infile
+        self.logger = logging.getLogger("GCodeParser")
         self.limits = axis_limits
         self.valid_g_codes = {
             "00": "Rapid positioning",
@@ -18,8 +19,7 @@ class InstructionSet(object):
         
     def read_gfile(self):
         commands = []
-        text="Checking g-code file"
-        nprint(text)
+        self.logger.info("Checking validity of g-code file.")
         with open(self.infile) as inf:
             for i, line in enumerate(inf):
                 if line.startswith("%"):
@@ -35,10 +35,7 @@ class InstructionSet(object):
                     commands.append(code_blocks)
                 else:
                     raise ValueError("Invalid Instruction in line {} of {}:\n ---> {}".format(i+1, self.infile, msg))
-        nflush(text)
-        text2 ="Loaded {} instructions".format(len(commands)) 
-        nprint(text2, "info")
-        nflush(text2, "info")
+        self.logger.info("Loaded {} instructions".format(len(commands)))
         return commands
                 
     def validate(self, code_blocks):
@@ -54,15 +51,15 @@ class InstructionSet(object):
                 val = float(val)
                 x_min, x_max = self.limits[prefix]
                 if val < x_min or val > x_max:
-                    return (102, "X value not in range (0,{}): {}".format(x_min, x_max, val))
+                    return (102, "X value not in range ({}, {}): {}".format(x_min, x_max, val))
             elif prefix == "Y":
                 val = float(val)
                 y_min, y_max = self.limits[prefix]
                 if val < y_min or val > y_max:
-                    return (103, "Y value not in range (0,{}): {}".format(y_min, y_max, val))
+                    return (103, "Y value not in range ({}, {}): {}".format(y_min, y_max, val))
             elif prefix == "Z":
                 val = float(val)
                 z_min, z_max = self.limits[prefix]
                 if val > z_min or val < z_max:
-                    return (104, "Z value not in range (0,{}): {}".format(z_min, z_max, val))
+                    return (104, "Z value not in range ({}, {}): {}".format(z_min, z_max, val))
         return (200, "Ok")

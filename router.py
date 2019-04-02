@@ -2,18 +2,17 @@
 
 from __future__ import print_function
 
-import sys
-import time
+import json
+import logging
+import logging.config
 from argparse import ArgumentParser
-import ConfigParser
 from multiprocessing import Process
 
 import RPi.GPIO as GPIO
 
-from nicelog import nprint, nflush
 from gpio_handler import GPIOHandler
 from stepper import Stepper
-from instruction_set import InstructionSet
+from gcode_parser import GCodeParser
 
 def move(motor, dist):
     motor.move(dist)
@@ -21,9 +20,15 @@ def move(motor, dist):
 class Router(object):
     def __init__(self, cfg_file, debug=False):
         self.cfg_file = cfg_file
-        self.cfg = ConfigParser.ConfigParser()
-        self.cfg.read(cfg_file)
+        with open("logging.json") as log_cfg:
+            log_dict = json.load(log_cfg)
+        logging.config.dictConfig(log_dict)
+        self.logger = logging.getLogger("main")
+        self.logger.info("Parsing Config File [{}]".format(cfg_file))
+        with open(cfg_file) as main_cfg:
+            self.cfg = json.load(main_cfg)
         self.debug = debug
+
         self.axes = ["X", "Y", "Z"]
         self.handler = GPIOHandler(GPIO.BOARD, False, debug)
         self.configure_motors()
@@ -34,51 +39,51 @@ class Router(object):
         self.pol = {}
         self.lim = {}
         self.motors = {}
+
         for axis in self.axes:
-            self.gpios[axis] = [int(x) for x in self.cfg.get(axis, 'gpio_pins').split(",")]
+            axis_cfg = self.cfg["axes"][axis]
+            self.gpios[axis] = axis_cfg['gpio']
 
-            self.handler.set_output_pins(self.gpios[axis])
-            self.handler.default_output_pins(self.gpios[axis])
+            self.handler.set_output_pins(self.gpios[axis].values())
+            self.handler.default_output_pins(self.gpios[axis].values())
 
-            self.pos[axis] = self.cfg.getfloat(axis, 'position')
-            self.pol[axis] = self.cfg.getint(axis, 'polarity')
+            self.pos[axis] = axis_cfg['position']
+            self.pol[axis] = axis_cfg['polarity']
         
-            sa = self.cfg.getfloat(axis, 'step_angle')
-            tpr = self.cfg.getfloat(axis, 'travel_per_rev')
-            mi = self.cfg.getint(axis, 'microstepping_mode')
-            a = self.cfg.getfloat(axis, 'acceleration_rate')
-            v = self.cfg.getfloat(axis, 'max_velocity')
-            f = self.cfg.getfloat(axis, 'max_feed_rate')
+            step_angle = axis_cfg['step_angle']
+            travel_per_rev = axis_cfg['travel_per_rev']
+            microsteps = axis_cfg['microsteps']
+            accel_rate = axis_cfg['acceleration_rate']
+            v_max = axis_cfg['max_velocity']
+            feed_rate = axis_cfg['max_feed_rate']
 
-            self.lim[axis] = (
-                self.cfg.getfloat(axis, 'min_travel'),
-                self.cfg.getfloat(axis, 'max_travel')
-            )
-
+            self.lim[axis] = axis_cfg['limits']
+            
             s = Stepper(
                 "Stepper {} axis".format(axis),
-                sa,
-                tpr,
-                mi,
+                step_angle,
+                travel_per_rev,
+                microsteps,
                 "traverse",
                 "CW",
                 self.gpios[axis],
-                a,
-                v,
-                f,
+                accel_rate,
+                v_max,
+                feed_rate,
                 self.debug
             )
             self.motors[axis] = s
         
     def save_positions(self):
         for axis in self.axes:
-            self.cfg.set(axis, 'position', self.pos[axis])
-        with open(self.cfg_file, "wb") as configfile:
-            self.cfg.write(configfile)
+            self.cfg["axes"][axis]["position"] = self.pos[axis]
+        with open(self.cfg_file, "w") as file_obj:
+            json.dump(self.cfg, file_obj, indent=4, sort_keys=True)
         
-    def route(self, instruction_file):
-        inst_set = InstructionSet(instruction_file, self.lim)
-        for command in inst_set.instructions:
+    def route(self, gcode_file):
+        gcode = GCodeParser(gcode_file, self.lim)
+        for command in gcode.instructions:
+            self.logger.info(command)
 #            print(command)
             # vectors for axis movement
             delta = {}
@@ -98,12 +103,10 @@ class Router(object):
                     delta[prefix] = float(val) - self.pos[prefix]
                 elif prefix == "Z":
                     delta[prefix] = float(val) - self.pos[prefix]
-            text="Calculating motion vector"
-            nprint(text)
+            self.logger.debug("Calculating motion vector")
 #            print("(x)   (dx) = ({:>6.2f})   ({:>7.2f})   ({:>6.2f})".format(self.pos["X"], delta["X"], target["X"]))
 #            print("(y) + (dy) = ({:>6.2f}) + ({:>7.2f}) = ({:>6.2f})".format(self.pos["Y"], delta["Y"], target["Y"]))
 #            print("(z)   (dz) = ({:>6.2f})   ({:>7.2f})   ({:>6.2f})".format(self.pos["Z"], delta["Z"], target["Z"]))
-            nflush(text)
             # Starting axis movement as parallel processes
             procs = []
             for axis in self.axes:
@@ -132,21 +135,21 @@ class Router(object):
                 self.pos[axis] += delta[axis]
 
         for axis in self.axes:
-            self.handler.default_output_pins(self.gpios[axis])
+            self.handler.default_output_pins(self.gpios[axis].values())
         self.handler.cleanup()
         
 
 
 def main():
     parser = ArgumentParser(description='Process materials')
-    parser.add_argument('-i', '--input', dest='input', help='input g-code file', required=True)
+    parser.add_argument('-i', '--gcode', dest='gcode', help='input g-code file', required=True)
     parser.add_argument('-d', '--debug', dest='debug', action='store_true', help='Set debug mode')
     args = parser.parse_args()
 #    debug = args.debug
-    instruction_file = args.input
+    instruction_file = args.gcode
     # GPIOs: [DIR,STP,M0,M1,M2]
 #    cfg = Config("settings.cfg")
-    cfg_file = "settings.cfg"
+    cfg_file = "config.json"
 
     router = Router(cfg_file, args.debug)
     router.route(instruction_file)

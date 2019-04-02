@@ -4,15 +4,15 @@ from __future__ import print_function
 
 import time
 import math
-import ConfigParser
+import logging
 from argparse import ArgumentParser
 
 import RPi.GPIO as GPIO
 
 from gpio_handler import GPIOHandler
-from nicelog import nprint, nflush, ninfo
 
 def busy_wait(dt):
+    """Busy wait as sleep can vary"""
     current_time = time.time()
     while (time.time() < current_time + dt):
         pass
@@ -29,6 +29,7 @@ class Stepper(object):
         self.a = a
         self.v = v
         self.f = f
+        self.logger = logging.getLogger("Stepper")
         self.debug = debug
         # Microstepping modes of DRV8825
         # Microstepping mode 1/n: M2, M1, M0
@@ -83,20 +84,24 @@ class Stepper(object):
         if mode not in self.modes:
             raise ValueError("Mode not available: {}".format(mode))
         bits = self.modes[mode]
-        text="{} - Setting Microstepping Mode: 1/{} {}".format(self.name, mode, bits)
-        nprint(text)
+        self.logger.debug("{} - Setting Microstepping Mode: 1/{} {}".format(self.name, mode, bits))
 
         if not self.debug:
-            for i in range(3):
-                GPIO.output(self.gpios[i+2], bits[i])
-                time.sleep(0.1)
+            GPIO.output(self.gpios["m2"], bits[0])
+            GPIO.output(self.gpios["m1"], bits[1])
+            GPIO.output(self.gpios["m0"], bits[2])
+            time.sleep(0.1)
+#            for i in range(3):
+#                GPIO.output(self.gpios[i+2], bits[i])
+#                time.sleep(0.1)
         self.mode = mode
-        nflush(text)
 
     def get_motion_type(self):
+        """Get motion type of stepper motor"""
         return self.motion_type
         
     def set_motion_type(self, motion_type):
+        """Set motion type of stepper motor"""
         self.motion_type = motion_type
 
     def get_direction(self):
@@ -108,32 +113,27 @@ class Stepper(object):
         # Do not change direction if input direction equals current direction
         if self.direction == direction and not initial:
             return
-        text="{} - Setting direction: {}".format(self.name, direction)
-        nprint(text)
+        self.logger.debug("{} - Setting direction: {}".format(self.name, direction))
         if not self.debug:
-            GPIO.output(self.gpios[0], self.dirs[direction])
+            GPIO.output(self.gpios["dir"], self.dirs[direction])
             time.sleep(0.1)
         self.direction = direction
-        nflush(text)
 
     def step(self, delay):
-        GPIO.output(self.gpios[1], True)
+        GPIO.output(self.gpios["step"], True)
         busy_wait(delay)
-        GPIO.output(self.gpios[1], False)
+        GPIO.output(self.gpios["step"], False)
         busy_wait(delay)
 
     def calc_steps(self, dist):
-        text="{} - Caluclating number of steps".format(self.name)
-        nprint(text)
+        self.logger.debug("{} - Caluclating number of steps".format(self.name))
         steps = int(round(abs(dist) * 360.0 / self.step_angle / self.travel_per_rev * self.mode))
-        nflush(text)
-        ninfo("{} steps required to reach destination".format(steps))
+        self.logger.debug("{} steps required to reach destination".format(steps))
         return steps
 
     def move(self, dist):
         steps = self.calc_steps(dist)
-        text="{} - Moving {}mm".format(self.name, dist)
-        nprint(text)
+        self.logger.debug("{} - Moving {}mm".format(self.name, dist))
         steps_left = steps
         step_interval = 0.0002
         
@@ -150,7 +150,6 @@ class Stepper(object):
                 self.step(delay)
 #            else:
 #                busy_wait(step_interval)
-        nflush(text)
 
     def configure_ramp(self, vm, method="trapezoidal"):
         if method == "trapezoidal":
@@ -159,8 +158,7 @@ class Stepper(object):
             return (self._configure_ramp_paraboloid(vm))
 
     def _configure_ramp_trapezoidal(self, vm):
-        text="{} - Generating trapezoidal ramp profile [vm = {}".format(self.name, vm)
-        nprint(text)
+        self.logger.info("{} - Generating trapezoidal ramp profile [v_max={}]".format(self.name, vm))
         sqrt = math.sqrt
         # steps per revolution: microstepping mode as factor
         spr = 360.0 / self.step_angle * self.mode
@@ -205,12 +203,10 @@ class Stepper(object):
 #        print("Max speed [mm/min]: {}".format(v_max))
 #        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.a))
 #        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".format(num_steps, cn, step_s, m_s, mm_min, rad_s, rpm))
-        nflush(text)
         return (c, num_steps)
         
     def _configure_ramp_paraboloid(self, vm):
-        text="{} - Generating trapezoidal ramp profile".format(self.name)
-        nprint(text)
+        self.logger.info("{} - Generating paraboloid ramp profile [v_max={}]".format(self.name, vm))
         sqrt = math.sqrt
         # steps per revolution: microstepping mode as factor
         spr = 200 * self.motors[0].get_mode()
@@ -258,7 +254,6 @@ class Stepper(object):
 #        print("Max speed [mm/min]: {}".format(vm))
 #        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.a))
 #        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".              format(i, cn, step_s, m_s, mm_min, rad_s, rpm))
-        nflush(text)
         return (c, n2)
         
 def main():
@@ -269,24 +264,24 @@ def main():
     parser.add_argument("-c", "--config", dest="config", help="Specify config")
     args = parser.parse_args()
 
-    cfg = ConfigParser.ConfigParser()
-    cfg.read(args.config)                            
-                        
+    with open(args.config) as file_obj:
+        cfg = json.load(file_obj)
+        
     name = "Stepper"
     step_angle = 1.8
     travel_per_rev = 5.0
     mode = 1
     motion_type = "traverse"
     direction = args.direction
-    gpios = [int(x) for x in cfg.get(args.axis, 'gpio_pins').split(",")]
+    gpios = cfg["axes"][args.axis]['gpio_pins']
     a = 60.0
     v = 800.0
     f = 400.0
     debug=False
     
     handler = GPIOHandler(GPIO.BOARD, False, debug)        
-    handler.set_output_pins(gpios)
-    handler.default_output_pins(gpios)
+    handler.set_output_pins(gpios.values())
+    handler.default_output_pins(gpios.values())
         
     s = Stepper(
         name,
@@ -302,8 +297,8 @@ def main():
         debug
     )
     s.move(float(args.distance))
-        
-    handler.default_output_pins(gpios)
+    
+    handler.default_output_pins(gpios.values())
     handler.cleanup()
 
 if __name__ == '__main__':

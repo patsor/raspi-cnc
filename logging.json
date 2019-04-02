@@ -1,0 +1,46 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+	"verbose": {
+	    "format": "%(asctime)s:%(levelname)s::%(name)s: %(message)s"
+	},
+	"simple": {
+	    "format": "%(levelname)s %(message)s"
+	}
+    },
+    "handlers": {
+	"console": {
+	    "class": "logging.StreamHandler",
+	    "level": "INFO",
+	    "formatter": "verbose",
+	    "stream": "ext://sys.stdout"
+	},
+	"file": {
+	    "class" : "logging.handlers.RotatingFileHandler",
+	    "level": "DEBUG",
+	    "formatter": "verbose",
+	    "filename": "router.log",
+	    "mode": "w",
+	    "backupCount": 0
+	}
+    },
+    "loggers": {
+	"main": {
+	    "level": "DEBUG",
+	    "handlers": ["console", "file"]
+	},
+	"Stepper": {
+	    "level": "DEBUG",
+	    "handlers": ["console", "file"]
+	},
+	"GPIOHandler": {
+	    "level": "DEBUG",
+	    "handlers": ["console", "file"]
+	},
+	"GCodeParser": {
+	    "level": "INFO",
+	    "handlers": ["console", "file"]
+	}
+    }
+}
