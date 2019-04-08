@@ -12,10 +12,14 @@ import RPi.GPIO as GPIO
 
 from gpio_handler import GPIOHandler
 from stepper import Stepper
+from motion_planner import MotionPlanner
 from gcode_parser import GCodeParser
 
-def move(motor, dist):
-    motor.move(dist)
+def move(motor, motion_planner, dist, debug):
+    step_intervals = motion_planner.plan_line(dist)
+    for step_interval in step_intervals:
+        if not debug:
+            motor.step(step_interval)
 
 class Router(object):
     def __init__(self, cfg_file, debug=False):
@@ -39,6 +43,7 @@ class Router(object):
         self.gpios = {}
         self.pol = {}
         self.lim = {}
+        self.motion_planner = {}
         self.motors = {}
 
         for axis in self.axes:
@@ -62,18 +67,24 @@ class Router(object):
             
             s = Stepper(
                 "Stepper {} axis".format(axis),
+                microsteps,
+                "CW",
+                self.gpios[axis],
+                self.debug
+            )
+            mp = MotionPlanner(
+                "{} axis".format(axis),
+                "traverse",
                 step_angle,
                 travel_per_rev,
                 microsteps,
-                "traverse",
-                "CW",
-                self.gpios[axis],
                 accel_rate,
                 v_max,
                 feed_rate,
                 self.debug
             )
             self.motors[axis] = s
+            self.motion_planner[axis] = mp
 
     def load_coordinates(self, coord_file):
         with open(coord_file) as coord:
@@ -98,10 +109,10 @@ class Router(object):
                 if prefix == "G":
                     if val == "00":
                         for axis in self.axes:
-                            self.motors[axis].set_motion_type("traverse")
+                            self.motion_planner[axis].set_motion_type("traverse")
                     else:
                         for axis in self.axes:
-                            self.motors[axis].set_motion_type("feed")
+                            self.motion_planner[axis].set_motion_type("feed")
                 elif prefix == "X":
                     delta[prefix] = float(val) - self.coordinates[prefix]
                 elif prefix == "Y":
@@ -127,7 +138,7 @@ class Router(object):
                         self.motors[axis].set_direction("CW")
                 else:
                     continue
-                proc = Process(target=move, args=(self.motors[axis], delta[axis]))
+                proc = Process(target=move, args=(self.motors[axis], self.motion_planner[axis], delta[axis], self.debug))
                 procs.append(proc)
 
             for proc in procs:

@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 import time
-import math
 import logging
 from argparse import ArgumentParser
 
@@ -18,17 +17,11 @@ def busy_wait(dt):
         pass
 
 class Stepper(object):
-    def __init__(self, name, step_angle, travel_per_rev, mode, motion_type, direction, gpios, a, v, f, debug=False):
+    def __init__(self, name, mode, direction, gpios, debug=False):
         self.name = name
-        self.step_angle = step_angle
-        self.travel_per_rev = travel_per_rev
         self.mode = mode
-        self.motion_type = motion_type
         self.direction = direction
         self.gpios = gpios
-        self.a = a
-        self.v = v
-        self.f = f
         self.logger = logging.getLogger("Stepper")
         self.debug = debug
         # Microstepping modes of DRV8825
@@ -65,12 +58,6 @@ class Stepper(object):
         
         self.set_mode(mode, initial=True)
         self.set_direction(direction, initial=True)
-        # Calculate ramping profiles for all possible modes
-        self.motion_type = motion_type
-        self.t_accel = {}
-        self.n_accel = {}
-        self.t_accel["traverse"], self.n_accel["traverse"] = self.configure_ramp(self.v)
-        self.t_accel["feed"], self.n_accel["feed"] = self.configure_ramp(self.f)
 
     def get_mode(self):
         """Get mode of stepper motor"""
@@ -96,14 +83,6 @@ class Stepper(object):
 #                time.sleep(0.1)
         self.mode = mode
 
-    def get_motion_type(self):
-        """Get motion type of stepper motor"""
-        return self.motion_type
-        
-    def set_motion_type(self, motion_type):
-        """Set motion type of stepper motor"""
-        self.motion_type = motion_type
-
     def get_direction(self):
         """Get direction of stepper motor"""
         return self.direction
@@ -124,137 +103,6 @@ class Stepper(object):
         busy_wait(delay)
         GPIO.output(self.gpios["step"], False)
         busy_wait(delay)
-
-    def calc_steps(self, dist):
-        self.logger.debug("{} - Caluclating number of steps".format(self.name))
-        steps = int(round(abs(dist) * 360.0 / self.step_angle / self.travel_per_rev * self.mode))
-        self.logger.debug("{} steps required to reach destination".format(steps))
-        return steps
-
-    def move(self, dist):
-        steps = self.calc_steps(dist)
-        self.logger.debug("{} - Moving {}mm".format(self.name, dist))
-        steps_left = steps
-        step_interval = 0.0002
-        
-        for i in range(steps):
-            steps_left -= 1
-
-            if i < self.n_accel[self.motion_type]:
-                step_interval = self.t_accel[self.motion_type][i]
-            if steps_left < self.n_accel[self.motion_type]:
-                step_interval = self.t_accel[self.motion_type][steps_left]
-            delay = step_interval * 0.5
-            
-            if not self.debug:
-                self.step(delay)
-#            else:
-#                busy_wait(step_interval)
-
-    def configure_ramp(self, vm, method="trapezoidal"):
-        if method == "trapezoidal":
-            return (self._configure_ramp_trapezoidal(vm))
-        elif method == "paraboloid":
-            return (self._configure_ramp_paraboloid(vm))
-
-    def _configure_ramp_trapezoidal(self, vm):
-        self.logger.info("{} - Generating trapezoidal ramp profile [v_max={}]".format(self.name, vm))
-        sqrt = math.sqrt
-        # steps per revolution: microstepping mode as factor
-        spr = 360.0 / self.step_angle * self.mode
-        # Number of steps it takes to move axis 1mm
-        steps_per_mm = spr / self.travel_per_rev
-        # linear movement along the axes per step
-        # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
-        # [rotation_angle = 2 * PI / SPR]
-        step_angle_in_rad = 2 * math.pi / spr
-        # Convert target velocity from mm/min to rad/s
-        cf = vm / 60 * steps_per_mm * step_angle_in_rad
-        # Convert acceleration from mm/s^2 to rad/s^2
-        accel_fact = self.a * steps_per_mm * step_angle_in_rad
-        # Calculation of number of steps needed to accelerate/decelerate
-        # vf = final velocity (rad/s)
-        # a = acceleration (rad/s^2)
-        # [n_steps = vf^2 / (2 * rotation_angle * a)]
-        num_steps = int(round(cf * cf / (2 * step_angle_in_rad * accel_fact)))
-        # Calculation of initial step duration during acceleration/deceleration ph\ase
-        # [c0 = (f=1) * sqrt(2 * rotation_angle / a)]
-        c0 = sqrt(2 * step_angle_in_rad / accel_fact)
-        # Add time intervals for steps to achieve linear acceleration
-        c = [c0]
-        cn = c0
-        for i in range(1, num_steps):
-            cn = c0 * (sqrt(i+1) - sqrt(i))
-            c.append(cn)
-            # Get the total duration of all acceleration steps
-            # should be [t_a = cf/a]
-#        c_total = sum(c)
-#        step_s = 1.0 / cn
-#        rad_s = step_angle_in_rad / cn
-#        rpm = rad_s * 9.55
-#        mm_min = rpm * 5
-#        mm_s = mm_min / 60
-#        m_s = mm_s / 1000
-#        print("Motor: {}".format(self.name))
-#        print("Steps per revolution: {}".format(spr))
-#        print("Initial step duration c0 [s]: {}".format(c0))
-#        print("Number of steps to accelerate/decelerate: {}".format(num_steps))
-#        print("Acceleration/Deceleration duration [s]: {}".format(c_total))
-#        print("Max speed [mm/min]: {}".format(v_max))
-#        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.a))
-#        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".format(num_steps, cn, step_s, m_s, mm_min, rad_s, rpm))
-        return (c, num_steps)
-        
-    def _configure_ramp_paraboloid(self, vm):
-        self.logger.info("{} - Generating paraboloid ramp profile [v_max={}]".format(self.name, vm))
-        sqrt = math.sqrt
-        # steps per revolution: microstepping mode as factor
-        spr = 200 * self.motors[0].get_mode()
-        # Number of steps it takes to move axis 1mm
-        steps_per_mm = spr / 5
-        # linear movement along the axes per step
-        # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
-        # [rotation_angle = 2 * PI / SPR]
-        step_angle_in_rad = 2 * math.pi / spr
-        # Convert target velocity from mm/min to rad/s
-        cf = vm / 60 * steps_per_mm * step_angle_in_rad
-        # Convert acceleration from mm/s^2 to rad/s^2
-        accel_fact = self.a * steps_per_mm * step_angle_in_rad
-        
-        # Calculation of initial step duration during acceleration/deceleration phase
-        # [c0 = (f=1) * sqrt(2 * rotation_angle / a)]
-        c0 = sqrt(2 * step_angle_in_rad / accel_fact)
-        c = [c0]
-        n1 = 0
-        n2 = int(round(cf * cf / (2 / math.e * step_angle_in_rad * accel_fact)))
-        cn = 0
-        c_trans = c0
-        for i in range(1, n2):
-            #            cn_old = c0 * (sqrt(i+1) - sqrt(i))
-            if i >= n1:
-                # linear factor to decrease acceleration upon threshold n1
-                # ranges from 1 to 0
-                factor = float(n2*2 - i)/(n2*2 - n1)
-                c_trans = c0 * sqrt(math.e / 2 / factor)
-                cn = c_trans * (sqrt(i+1) - sqrt(i))
-            else:
-                cn = c0 * (sqrt(i+1) - sqrt(i))
-            c.append(cn)
-#        c_total = sum(c)
-#        step_s = 1.0 / cn
-#        rad_s = step_angle_in_rad / cn
-#        rpm = rad_s * 9.55
-#        mm_min = rpm * 5
-#        mm_s = mm_min / 60
-#        m_s = mm_s / 1000
-#        print("Steps per revolution: {}".format(spr))
-#        print("Initial step duration c0 [s]: {}".format(c0))
-#        print("Number of steps to accelerate/decelerate: {}".format(n2))
-#        print("Acceleration/Deceleration duration [s]: {}".format(c_total))
-#        print("Max speed [mm/min]: {}".format(vm))
-#        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.a))
-#        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".              format(i, cn, step_s, m_s, mm_min, rad_s, rpm))
-        return (c, n2)
         
 def main():
     parser = ArgumentParser(description="Plans axis movements")
