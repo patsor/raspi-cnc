@@ -7,23 +7,71 @@ import math
 import logging
 from argparse import ArgumentParser
 
+from db_conn import DBConnection
+
 class MotionPlanner(object):
-    def __init__(self, name, motion_type, step_angle, travel_per_rev, mode, accel, traverse_rate, feed_rate, debug=False):
+    def __init__(self, name, motion_type, ramp_type, step_angle, travel_per_rev, mode, accel, traverse_rate, feed_rate, db, debug=False):
         self.name = name
         self.motion_type = motion_type
+        self.ramp_type = ramp_type
         self.step_angle = step_angle
         self.travel_per_rev = travel_per_rev
         self.mode = mode
         self.accel = accel
         self.logger = logging.getLogger("MotionPlanner")
+        self.db = db
         self.debug = debug
 
         self.t_accel = {}
         self.n_accel = {}
-        self.t_accel["traverse"] = self.configure_ramp(traverse_rate, "polynomial")
-        self.n_accel["traverse"] = len(self.t_accel["traverse"])
-        self.t_accel["feed"] = self.configure_ramp(feed_rate, "polynomial")
-        self.n_accel["feed"] = len(self.t_accel["feed"])
+        rp_traverse = self.get_profile_from_db(ramp_type, traverse_rate, accel, 0)
+        if rp_traverse:
+            self.logger.debug("Ramp profile loaded from DB.")
+            self.t_accel["traverse"] = rp_traverse
+            self.n_accel["traverse"] = len(rp_traverse)
+        else:
+            (step_timings, c_total) = self.configure_ramp(traverse_rate, ramp_type)
+            self.t_accel["traverse"] = step_timings
+            self.add_profile_to_db(ramp_type, traverse_rate, accel, 0, step_timings, c_total)
+            self.n_accel["traverse"] = len(step_timings)
+        rp_feed = self.get_profile_from_db(ramp_type, feed_rate, accel, 0)
+        if rp_feed:
+            self.logger.debug("Ramp profile loaded from DB.")
+            self.t_accel["feed"] = rp_feed
+            self.n_accel["feed"] = len(rp_feed)
+        else:
+            (step_timings, c_total) = self.configure_ramp(feed_rate, ramp_type)
+            self.t_accel["feed"] = step_timings
+            
+            self.add_profile_to_db(ramp_type, feed_rate, accel, 0, step_timings, c_total)
+            self.n_accel["feed"] = len(step_timings)
+
+    def get_profile_from_db(self, rtype, v_max, a_max, j_max):
+        doc_id = "{}{}V{}A{}J".format(rtype[0].upper(), int(v_max), int(a_max), int(j_max))
+        try:
+            document = self.db.find_document("ramp_profiles", doc_id)
+            if document:
+                return document["step_timings"]
+            else:
+                return None
+        except:
+            return None
+
+    def add_profile_to_db(self, rtype, v_max, a_max, j_max, steps, t_accel):
+        doc_id = "{}{}V{}A{}J".format(rtype[0].upper(), int(v_max), int(a_max), int(j_max))
+        document = {"_id": doc_id,
+                    "type": rtype,
+                    "v_max": v_max,
+                    "a_max": a_max,
+                    "j_max": j_max,
+                    "T_accel": t_accel,
+                    "TPR": self.travel_per_rev,
+                    "step_angle": self.step_angle,
+                    "step_timings": steps}
+        try:
+            self.db.insert_document("ramp_profiles", document)
+        except:
+            self.logger.warning("Cannot store profile in DB, as DB not available")
 
     def get_motion_type(self):
         """Get motion type of stepper motor"""
@@ -63,11 +111,14 @@ class MotionPlanner(object):
     def configure_ramp(self, vm, method="trapezoidal"):
         if method == "trapezoidal":
             return (self._configure_ramp_trapezoidal(vm))
+        elif method == "sigmoidal":
+            return (self._configure_ramp_sigmoidal(vm))
         elif method == "polynomial":
             return (self._configure_ramp_polynomial(vm))
 
     def _configure_ramp_trapezoidal(self, vm):
         self.logger.info("{} - Generating trapezoidal ramp profile [v_max={}]".format(self.name, vm))
+#        outf = open("ramp_profile_t" + str(int(vm)) + ".csv", "w")
         sqrt = math.sqrt
         # steps per revolution: microstepping mode as factor
         spr = 360.0 / self.step_angle * self.mode
@@ -90,29 +141,57 @@ class MotionPlanner(object):
         # [c0 = (f=1) * sqrt(2 * rotation_angle / a)]
         c0 = sqrt(2 * step_angle_in_rad / accel_fact)
         # Add time intervals for steps to achieve linear acceleration
+#        t = 0.0
         c = [c0]
-        cn = c0
+#        cn = c0
         for i in range(1, num_steps):
             cn = c0 * (sqrt(i+1) - sqrt(i))
+#            t += cn
+#            outf.write("{};{}\n".format(t, 1.0/cn/40*60))
             c.append(cn)
-            # Get the total duration of all acceleration steps
-            # should be [t_a = cf/a]
-#        c_total = sum(c)
-#        step_s = 1.0 / cn
-#        rad_s = step_angle_in_rad / cn
-#        rpm = rad_s * 9.55
-#        mm_min = rpm * 5
-#        mm_s = mm_min / 60
-#        m_s = mm_s / 1000
-#        print("Motor: {}".format(self.name))
-#        print("Steps per revolution: {}".format(spr))
-#        print("Initial step duration c0 [s]: {}".format(c0))
-#        print("Number of steps to accelerate/decelerate: {}".format(num_steps))
-#        print("Acceleration/Deceleration duration [s]: {}".format(c_total))
-#        print("Max speed [mm/min]: {}".format(v_max))
-#        print("Acceleration/Deceleration [mm/s^2]: {}".format(self.accel))
-#        print("c{}: {} => Final speed: {}[steps/s], {}[m/s], {}[mm/min], {}[rad/s], {}[rpm]".format(num_steps, cn, step_s, m_s, mm_min, rad_s, rpm))
-        return c
+        # Get the total duration of all acceleration steps
+        # should be [t_a = cf/a]
+        c_total = sum(c)
+#        outf.close()
+        return (c, c_total)
+
+    def _configure_ramp_sigmoidal(self, vm):
+        self.logger.info("{} - Generating sigmoidal ramp profile [v_max={}]".format(self.name, vm))
+#        outf = open("ramp_profile_s" + str(int(vm)) + ".csv", "w")
+        # steps per revolution: microstepping mode as factor
+        spr = 360.0 / self.step_angle * self.mode
+        # Number of steps it takes to move axis 1mm
+        steps_per_mm = spr / self.travel_per_rev
+        # linear movement along the axes per step
+        # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
+        # [rotation_angle = 2 * PI / SPR]
+        step_angle_in_rad = 2 * math.pi / spr
+        # Convert target velocity from mm/min to rad/s
+        cf = vm / 60 * steps_per_mm * step_angle_in_rad
+        # Convert acceleration from mm/s^2 to rad/s^2
+        accel_fact = self.accel * steps_per_mm * step_angle_in_rad
+        T_2 = 0.4
+        # pre-calculated values
+        a_func = math.e**(4 * accel_fact * T_2 / cf)
+        t_tmp = T_2 - math.log(cf/(0.995*cf)-1)/(4*accel_fact/cf)
+        
+        num_steps = int(round(cf**2 * (math.log(math.e**(4*accel_fact*t_tmp/cf) + a_func) - math.log(a_func + 1)) / (4 * accel_fact * step_angle_in_rad)))
+#        num_steps = int(round(cf * cf / (step_angle_in_rad * accel_fact)))
+#        t = 0.0
+        c = []
+        for i in range(num_steps):
+            cn_i_plus_one = cf * math.log((a_func + 1) * (math.e**(4 * accel_fact * (i+1) * step_angle_in_rad / cf**2)) - a_func) / (4 * accel_fact)
+            cn_i = cf * math.log((a_func + 1) * (math.e**(4 * accel_fact * i * step_angle_in_rad / cf**2)) - a_func) / (4 * accel_fact)
+            cn = cn_i_plus_one - cn_i
+#            print(1/cn/40*60)
+#            t += cn
+#            outf.write("{};{}\n".format(t, 1.0/cn/40*60))
+            c.append(cn)
+        # Get the total duration of all acceleration steps
+        # should be [t_a = cf/a]
+        c_total = sum(c)
+#        outf.close()
+        return (c, c_total)
 
     def _configure_ramp_polynomial(self, vm):
         sqrt = math.sqrt

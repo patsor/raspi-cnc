@@ -41,6 +41,10 @@
 	"GCodeParser": {
 	    "level": "INFO",
 	    "handlers": ["console", "file"]
+	},
+	"MotionPlanner": {
+	    "level": "DEBUG",
+	    "handlers": ["console", "file"]
 	}
     }
 }

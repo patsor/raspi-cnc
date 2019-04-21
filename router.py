@@ -14,6 +14,7 @@ from gpio_handler import GPIOHandler
 from stepper import Stepper
 from motion_planner import MotionPlanner
 from gcode_parser import GCodeParser
+from db_conn import DBConnection
 
 def move(motor, motion_planner, dist, debug):
     step_intervals = motion_planner.plan_line(dist)
@@ -31,6 +32,13 @@ class Router(object):
         self.logger.info("Parsing Config File [{}]".format(cfg_file))
         with open(cfg_file) as main_cfg:
             self.cfg = json.load(main_cfg)
+
+        db_host = self.cfg["general"]["db_host"]
+        db_port = self.cfg["general"]["db_port"]
+        db_name = self.cfg["general"]["db_name"]
+        
+        self.db = DBConnection(db_host, db_port, db_name)
+        
         self.coord_file = "coord.json"
         self.coordinates = self.load_coordinates(self.coord_file)
         self.debug = debug
@@ -55,7 +63,8 @@ class Router(object):
 
 #            self.pos[axis] = axis_cfg['position']
             self.pol[axis] = axis_cfg['polarity']
-        
+
+            ramp_type = axis_cfg['ramp_type']
             step_angle = axis_cfg['step_angle']
             travel_per_rev = axis_cfg['travel_per_rev']
             microsteps = axis_cfg['microsteps']
@@ -75,12 +84,14 @@ class Router(object):
             mp = MotionPlanner(
                 "{} axis".format(axis),
                 "traverse",
+                ramp_type,
                 step_angle,
                 travel_per_rev,
                 microsteps,
                 accel_rate,
                 v_max,
                 feed_rate,
+                self.db,
                 self.debug
             )
             self.motors[axis] = s
