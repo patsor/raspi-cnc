@@ -13,7 +13,8 @@ class GCodeParser(object):
         self.limits = axis_limits
         self.valid_g_codes = {
             "00": "Rapid positioning",
-            "01": "Linear interpolation"
+            "01": "Linear interpolation",
+            "28": "Return to home position"
         }
         self.instructions = self.read_gfile()
         

@@ -14,7 +14,7 @@
                 800.0
             ], 
             "max_feed_rate": 500.0, 
-            "max_velocity": 1200.0, 
+            "max_velocity": 1600.0, 
             "microsteps": 1, 
             "polarity": false, 
             "step_angle": 1.8, 

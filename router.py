@@ -121,9 +121,13 @@ class Router(object):
                     if val == "00":
                         for axis in self.axes:
                             self.motion_planner[axis].set_motion_type("traverse")
-                    else:
+                    elif val == "01":
                         for axis in self.axes:
                             self.motion_planner[axis].set_motion_type("feed")
+                    elif val == "28":
+                        for axis in self.axes:
+                            self.motion_planner[axis].set_motion_type("traverse")
+                            delta[axis] = - self.coordinates[axis]
                 elif prefix == "X":
                     delta[prefix] = float(val) - self.coordinates[prefix]
                 elif prefix == "Y":
@@ -131,9 +135,6 @@ class Router(object):
                 elif prefix == "Z":
                     delta[prefix] = float(val) - self.coordinates[prefix]
             self.logger.debug("Calculating motion vector")
-#            print("(x)   (dx) = ({:>6.2f})   ({:>7.2f})   ({:>6.2f})".format(self.pos["X"], delta["X"], target["X"]))
-#            print("(y) + (dy) = ({:>6.2f}) + ({:>7.2f}) = ({:>6.2f})".format(self.pos["Y"], delta["Y"], target["Y"]))
-#            print("(z)   (dz) = ({:>6.2f})   ({:>7.2f})   ({:>6.2f})".format(self.pos["Z"], delta["Z"], target["Z"]))
             # Starting axis movement as parallel processes
             procs = []
             for axis in self.axes:
