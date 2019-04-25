@@ -127,19 +127,19 @@ class MotionPlanner(object):
         # linear movement along the axes per step
         # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
         # [rotation_angle = 2 * PI / SPR]
-        step_angle_in_rad = 2 * math.pi / spr
+        angle = 2 * math.pi / spr
         # Convert target velocity from mm/min to rad/s
-        cf = vm / 60 * steps_per_mm * step_angle_in_rad
+        w = vm / 60 * steps_per_mm * angle
         # Convert acceleration from mm/s^2 to rad/s^2
-        accel_fact = self.accel * steps_per_mm * step_angle_in_rad
+        a = self.accel * steps_per_mm * angle
         # Calculation of number of steps needed to accelerate/decelerate
         # vf = final velocity (rad/s)
         # a = acceleration (rad/s^2)
         # [n_steps = vf^2 / (2 * rotation_angle * a)]
-        num_steps = int(round(cf * cf / (2 * step_angle_in_rad * accel_fact)))
+        num_steps = int(round(w**2 / (2 * angle * a)))
         # Calculation of initial step duration during acceleration/deceleration ph\ase
         # [c0 = (f=1) * sqrt(2 * rotation_angle / a)]
-        c0 = sqrt(2 * step_angle_in_rad / accel_fact)
+        c0 = sqrt(2 * angle / a)
         # Add time intervals for steps to achieve linear acceleration
 #        t = 0.0
         c = [c0]
@@ -165,27 +165,26 @@ class MotionPlanner(object):
         # linear movement along the axes per step
         # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
         # [rotation_angle = 2 * PI / SPR]
-        step_angle_in_rad = 2 * math.pi / spr
+        angle = 2 * math.pi / spr
         # Convert target velocity from mm/min to rad/s
-        cf = vm / 60 * steps_per_mm * step_angle_in_rad
+        w = vm / 60 * steps_per_mm * angle
         # Convert acceleration from mm/s^2 to rad/s^2
-        accel_fact = self.accel * steps_per_mm * step_angle_in_rad
-        T_2 = 0.4
+        a = self.accel * steps_per_mm * angle
+        ti = 0.4
         # pre-calculated values
-        a_func = math.e**(4 * accel_fact * T_2 / cf)
-        t_tmp = T_2 - math.log(cf/(0.995*cf)-1)/(4*accel_fact/cf)
+        w_4_a = w / (4*a)
+        a_4_w = (4*a) / w
+        e_ti = math.e**(a_4_w*ti)
+        e_n = math.e**(a_4_w*angle/w)
+        t_mod = ti - w_4_a * math.log(0.005)
         
-        num_steps = int(round(cf**2 * (math.log(math.e**(4*accel_fact*t_tmp/cf) + a_func) - math.log(a_func + 1)) / (4 * accel_fact * step_angle_in_rad)))
-#        num_steps = int(round(cf * cf / (step_angle_in_rad * accel_fact)))
+        num_steps = int(round(w**2 * (math.log(math.e**(a_4_w*t_mod) + e_ti) - math.log(e_ti + 1)) / (4*a*angle)))
 #        t = 0.0
         c = []
-        for i in range(num_steps):
-            cn_i_plus_one = cf * math.log((a_func + 1) * (math.e**(4 * accel_fact * (i+1) * step_angle_in_rad / cf**2)) - a_func) / (4 * accel_fact)
-            cn_i = cf * math.log((a_func + 1) * (math.e**(4 * accel_fact * i * step_angle_in_rad / cf**2)) - a_func) / (4 * accel_fact)
-            cn = cn_i_plus_one - cn_i
-#            print(1/cn/40*60)
+        for i in range(1, num_steps):
+            cn = w_4_a * math.log(((e_ti + 1) * e_n**(i+1) - e_ti)/((e_ti + 1) * e_n**i - e_ti))
 #            t += cn
-#            outf.write("{};{}\n".format(t, 1.0/cn/40*60))
+#            outf.write("{};{}\n".format(t, 1.0/cn/steps_per_mm*60))
             c.append(cn)
         # Get the total duration of all acceleration steps
         # should be [t_a = cf/a]
