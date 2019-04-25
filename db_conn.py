@@ -2,10 +2,31 @@
 
 from argparse import ArgumentParser
 
+import sqlalchemy
+
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
-class DBConnection(object):
+
+class PostgresDBConnection(object):
+    def __init__(self, user, password, db, host="localhost", port=5432):
+        self.url = "postgresql://{}:{}@{}:{}/{}".format(
+            user,
+            password,
+            host,
+            port,
+            db
+        )
+
+    def connect(self):
+        conn = sqlalchemy.create_engine(self.url, client_encoding="utf8")
+
+        meta = sqlalchemy.MetaData(bind=conn, reflect=True)
+
+        return conn, meta
+        
+
+class MongoDBConnection(object):
     def __init__(self, host, port, db_name):
         self.host = host
         self.port = port
@@ -55,23 +76,7 @@ def main():
     parser.add_argument("-d", "--db", dest="db", help="Specify db name")
 
     args = parser.parse_args()
-    db_conn = DBConnection(args.host, args.port, args.db)
-#    for a_max in range(1, 100):
-#        for v_max in range(1, 1200):
-        
-#            rp = {"_id": "T{}V{}A0J".format(v_max, a_max),
-#                   "v_max": float(v_max),
-#                   "a_max": float(a_max),
-#                   "j_max": 0.0,
-#                   "T_accel": float(v_max / 60.0 / a_max),
-#                   "step_timings": [0.125,
-#                                    0.0875,
-#                                    0.0625,
-#                                    0.006327],
-#                   "type": "trapezoidal"}
-    
-#            db_conn.insert_document("ramp_profiles", rp)
-#    db_conn.insert_document("ramp_profiles", rp2)
+    db_conn = MongoDBConnection(args.host, args.port, args.db)
 
     print(db_conn.find_document("ramp_profiles", "T1200V50A0J"))
 
