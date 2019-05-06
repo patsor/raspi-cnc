@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 
 import math
+import time
 
 from sqlalchemy import Table, Column, Integer, Float, String, ForeignKey
 from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.ext.declarative import declarative_base
 
 from db_conn import PostgresDBConnection
 
-def _configure_ramp_sigmoidal(vm, accel, mode):
+Base = declarative_base()
+
+def configure_ramp_sigmoidal(vm, accel, mode):
     #self.logger.info("{} - Generating sigmoidal ramp profile [v_max={}]".format(self.name, vm))
     #outf = open("ramp_profile_s" + str(int(vm)) + ".csv", "w")
     # steps per revolution: microstepping mode as factor
@@ -45,34 +49,48 @@ def _configure_ramp_sigmoidal(vm, accel, mode):
 #        outf.close()
     return (c, c_total)
 
+class RampProfile(Base):
+    __tablename__ = "ramp_profile"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255))
+    type = Column(String(255))
+    v_max = Column(Float)
+    a_max = Column(Float)
+    j_max = Column(Float)
+    mode = Column(Integer)
+    T_a = Column(Float)
+    TPR = Column(Float)
+    step_angle = Column(Float)
+    step_timings = Column(ARRAY(Float))
+
 def main():
-
     db = PostgresDBConnection("pi", "x264codec", "test")
-    conn, meta = db.connect()
+    engine = db.connect()
 
-    profiles = Table("ramp_profiles", meta,
-                     Column("name", String, primary_key=True),
-                     Column("type", String),
-                     Column("v_max", Float),
-                     Column("a_max", Float),
-                     Column("j_max", Float),
-                     Column("mode", Integer),
-                     Column("T_a", Float),
-                     Column("TPR", Float),
-                     Column("step_angle", Float),
-                     Column("step_timings", ARRAY(Float))
-    )
+    #----------------------------------- profiles = Table("ramp_profiles", meta,
+                     #---------------- Column("name", String, primary_key=True),
+                     #---------------------------------- Column("type", String),
+                     #---------------------------------- Column("v_max", Float),
+                     #---------------------------------- Column("a_max", Float),
+                     #---------------------------------- Column("j_max", Float),
+                     #--------------------------------- Column("mode", Integer),
+                     #------------------------------------ Column("T_a", Float),
+                     #------------------------------------ Column("TPR", Float),
+                     #----------------------------- Column("step_angle", Float),
+                     #--------------------- Column("step_timings", ARRAY(Float))
+    #------------------------------------------------------------------------- )
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
 
-    meta.create_all(conn)
-
-    ramp_profiles = meta.tables["ramp_profiles"]
-    
+    #ramp_profiles = meta.tables["ramp_profiles"]
+    conn = engine.connect()
+    #ins = RampProfile.__table__.insert()
     for i in range(200, 1201):
+        doc_list = []
         for j in range(10, 201):
-            ins = ramp_profiles.insert()
-            doc_list = []
+            
             for k in [1, 2, 4, 8, 16, 32]:
-                (step_delays, total_time) = _configure_ramp_sigmoidal(float(i), float(j), k)
+                (step_delays, total_time) = configure_ramp_sigmoidal(float(i), float(j), k)
                 #print(step_delays, total_time)
                 name = "S{}V{}A{}J{}M".format(i, j, 0, k)
                 values = {"name": name,
@@ -97,9 +115,14 @@ def main():
                                                          # step_timings=step_delays)
                 #print(document)
                 doc_list.append(values)
-            conn.execute(ins, doc_list)
-        print(i)
         
+        
+        t1 = time.time()
+        conn.execute(RampProfile.__table__.insert().values(doc_list))
+        t2 = time.time()
+        print("Inserted all rows for v={0} ({1:.2f}s).".format(i, t2-t1))
+            
+    
             #print(result.inserted_primary_key)
             #print(name)
 

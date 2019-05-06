@@ -19,11 +19,9 @@ class PostgresDBConnection(object):
         )
 
     def connect(self):
-        conn = sqlalchemy.create_engine(self.url, client_encoding="utf8")
+        engine = sqlalchemy.create_engine(self.url, echo=False)
 
-        meta = sqlalchemy.MetaData(bind=conn, reflect=True)
-
-        return conn, meta
+        return engine
         
 
 class MongoDBConnection(object):

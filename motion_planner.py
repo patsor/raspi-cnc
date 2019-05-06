@@ -7,7 +7,6 @@ import math
 import logging
 from argparse import ArgumentParser
 
-from db_conn import DBConnection
 
 class MotionPlanner(object):
     def __init__(self, name, motion_type, ramp_type, step_angle, travel_per_rev, mode, accel, traverse_rate, feed_rate, db, debug=False):
@@ -107,6 +106,65 @@ class MotionPlanner(object):
 #                self.step(delay)
             step_intervals.append(delay)
         return step_intervals
+    
+    def plan_interpolated_line(self, x, y):
+        nx = self.calc_steps(x)
+        ny = self.calc_steps(y)
+        if x > y:
+            for i in range(nx):
+                # step x
+                if i % nx/ny:
+                    # step y
+                    pass
+                    
+        else:
+            for i in range(ny):
+                # step y
+                if i % ny/nx:
+                    # step x
+                    pass
+            
+    
+    def plan_interpolated_circle(self, x0, y0, r):
+        #n = self.calc_steps(r)
+        x = 0
+        y = -r
+        d = 1.25 - r
+        points = []
+        init_points = [(x, y)]
+        dx = []
+        dy = []
+        # 3rd quadrant
+        while x > y:
+            if d < 0:
+                x -= 1
+                d += -2*x + 1
+                
+            else:
+                x -= 1
+                y += 1
+                d += -2*(x-y) + 1
+            point = (x, y)
+            init_points.append(point)
+        octant_len = len(init_points)
+        for i in range(octant_len-2, -1, -1):
+            point = (init_points[i][1], init_points[i][0])
+            init_points.append(point)
+        points.extend(init_points)
+        # 2nd quadrant
+        for p in init_points[1:]:
+            points.append((p[1], -p[0]))
+        # 1st quadrant
+        for p in init_points[1:]:
+            points.append((-p[0], -p[1]))
+        # 4th quadrant
+        for p in init_points[1:]:
+            points.append((-p[1], p[0]))
+            
+        for i in range(1, len(points)):
+            dx = points[i][0] - points[i-1][0]
+            dy = points[i][1] - points[i-1][1]
+            print(dx, dy)
             
     def configure_ramp(self, vm, method="trapezoidal"):
         if method == "trapezoidal":
@@ -279,15 +337,17 @@ def main():
     mp = MotionPlanner(
         "X axis",
         "traverse",
+        "sigmoidal",
         step_angle,
         travel_per_rev,
         mode,
         a,
         v,
         f,
+        None,
         debug
     )
-    mp.plan_line(10)
+    mp.plan_interpolated_circle(20)
 #    mp.configure_ramp("scurve", v)
 
 
