@@ -1,0 +1,122 @@
+\documentclass[hidelinks, 11pt, fleqn]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\usepackage{wrapfig}
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing}
+\usetikzlibrary{calc}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\geometry{letterpaper}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{amssymb}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{lightgray}{rgb}{0.7,0.7,0.7}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.92,0.92,0.92}
+
+\renewcommand{\lstlistingname}{Algorithm}% Listing -> Algorithm
+
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegray},
+	keywordstyle=\color{red},
+	numberstyle=\tiny\color{lightgray},
+	stringstyle=\color{codepurple},
+	basicstyle=\footnotesize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	numbers=left,                    
+	numbersep=5pt,                  
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=4
+}
+
+\lstset{style=mystyle}
+
+
+
+%SetDrawFunctions
+
+\newcommand{\hole}[3] % x in cm, y in cm, radius in mm
+{ 
+	% draw hole
+	\draw (#1,#2) circle (#3mm);
+	% crosshair
+	\draw (#1,#2-0.05) -- (#1,#2+0.05);
+	\draw (#1-0.05,#2) -- (#1+0.05,#2);
+	% centering lines
+	\draw (#1,#2-0.1*#3-0.05) -- (#1,#2-0.1);
+	\draw (#1,#2+0.1) -- (#1,#2+0.1*#3+0.05);
+	\draw (#1-0.1*#3-0.05,#2) -- (#1-0.1,#2);
+	\draw (#1+0.1,#2) -- (#1+0.1*#3+0.05,#2);
+}
+\newcommand{\dimsv}[4] % start, end, x, scale [1:x]
+{
+	\draw (#3-0.2,#1) -- (#3+0.2,#1);
+	\draw[<-] (#3,#1) -- (#3,{(#1+#2)/2-0.2});
+	\draw (#3,{(#1+#2)/2}) node {\footnotesize \pgfmathparse{(#2 - #1)*10/#4} \pgfmathprintnumber{\pgfmathresult} };
+	\draw[->] (#3,{(#1+#2)/2+0.2}) -- (#3,#2);
+	\draw (#3-0.2,#2) -- (#3+0.2,#2);
+}
+\newcommand{\dimsh}[4] % start, end, y, scale [1:x]
+{
+	\draw (#1,#3-0.1) -- (#1,#3+0.1);
+	\draw[<-] (#1,#3) -- ({(#1+#2)/2-0.3},#3);
+	\draw ({(#1+#2)/2},#3) node {\footnotesize \pgfmathparse{(#2 - #1)*10/#4} \pgfmathprintnumber{\pgfmathresult} };
+	\draw[->] ({(#1+#2)/2+0.3},#3) -- (#2,#3);
+	\draw (#2,#3-0.1) -- (#2,#3+0.1);
+}
+
+%SetFonts
+\newtagform{brackets}{[}{]}
+\usetagform{brackets}
+
+\title{\textbf{CNC Router}}
+\author{Patrick Sorn}
+
+\begin{document}
+\maketitle
+\tableofcontents 
+\pagebreak
+\section{Introduction}
+\pagebreak
+\section{Portal}
+\subsection{Base Plate}
+
+\begin{figure}[h]
+	\begin{tikzpicture}
+	% scale 1:10
+	\draw[thick] (0, 0) rectangle (16, 2);
+	\end{tikzpicture}
+\caption{Base Plate.}
+\label{fig:base_plate}
+\end{figure}
+
+\subsection{Side Plate}
+
+\begin{figure}[h]
+	\begin{tikzpicture}
+	% scale 1:10
+	\draw[thick] (0, 0) rectangle (6, 12);
+	\hole{1}{0.5}{1};
+	\hole{1}{1}{1};
+	\hole{2}{0.5}{1};
+	\hole{2}{1}{1};
+	\end{tikzpicture}
+\caption{Side Plate.}
+\label{fig:side_plate}
+\end{figure}
+
+\end{document}
