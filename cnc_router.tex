@@ -62,19 +62,19 @@
 	\draw (#1-0.1*#3-0.05,#2) -- (#1-0.1,#2);
 	\draw (#1+0.1,#2) -- (#1+0.1*#3+0.05,#2);
 }
-\newcommand{\dimsv}[4] % start, end, x, scale [1:x]
+\newcommand{\dimsv}[3] % start, end, x
 {
 	\draw (#3-0.2,#1) -- (#3+0.2,#1);
 	\draw[<-] (#3,#1) -- (#3,{(#1+#2)/2-0.2});
-	\draw (#3,{(#1+#2)/2}) node {\footnotesize \pgfmathparse{(#2 - #1)*10/#4} \pgfmathprintnumber{\pgfmathresult} };
+	\draw (#3,{(#1+#2)/2}) node {\footnotesize \pgfmathparse{(#2 - #1)*10} \pgfmathprintnumber{\pgfmathresult} };
 	\draw[->] (#3,{(#1+#2)/2+0.2}) -- (#3,#2);
 	\draw (#3-0.2,#2) -- (#3+0.2,#2);
 }
-\newcommand{\dimsh}[4] % start, end, y, scale [1:x]
+\newcommand{\dimsh}[3] % start, end, y
 {
 	\draw (#1,#3-0.1) -- (#1,#3+0.1);
 	\draw[<-] (#1,#3) -- ({(#1+#2)/2-0.3},#3);
-	\draw ({(#1+#2)/2},#3) node {\footnotesize \pgfmathparse{(#2 - #1)*10/#4} \pgfmathprintnumber{\pgfmathresult} };
+	\draw ({(#1+#2)/2},#3) node {\footnotesize \pgfmathparse{(#2 - #1)*10} \pgfmathprintnumber{\pgfmathresult} };
 	\draw[->] ({(#1+#2)/2+0.3},#3) -- (#2,#3);
 	\draw (#2,#3-0.1) -- (#2,#3+0.1);
 }
@@ -96,158 +96,504 @@
 \subsection{Base Plate}
 
 \begin{figure}[h]
-	\begin{tikzpicture}
+	\begin{tikzpicture}[scale=0.2, every node/.style={scale=0.2}]
 	% 84cm x 20cm x 12mm
 	% scale 1:5
-	\draw[thick] (0, 0) rectangle (16.8, 4.0);
-	\hole{0.2}{0.6}{1.2};
-	\hole{0.2}{1.4}{1.2};
-	\hole{0.2}{2.6}{1.2};
-	\hole{0.2}{3.4}{1.2};
+	\draw[thick] (0, 0) rectangle (84, 20);
+	\hole{1}{3}{6};
+	\hole{1}{7}{6};
+	\hole{1}{13}{6};
+	\hole{1}{17}{6};
 	
-	\hole{16.6}{0.6}{1.2};
-	\hole{16.6}{1.4}{1.2};
-	\hole{16.6}{2.6}{1.2};
-	\hole{16.6}{3.4}{1.2};
+	\hole{83}{3}{6};
+	\hole{83}{7}{6};
+	\hole{83}{13}{6};
+	\hole{83}{17}{6};
 	
-	\hole{8}{1.76}{1};
-	\hole{8}{2.24}{1};
-	\hole{8.8}{1.76}{1};
-	\hole{8.8}{2.24}{1};
+	\hole{40}{8.8}{5};
+	\hole{40}{11.2}{5};
+	\hole{44}{8.8}{5};
+	\hole{44}{11.2}{5};
 	
-	\dimsh{0}{0.2}{-0.4}{0.2};
-	\dimsh{0.2}{8}{-0.4}{0.2};
-	\dimsh{8}{8.8}{-0.4}{0.2};
-	\dimsh{8.8}{16.6}{-0.4}{0.2};
-	\dimsh{16.6}{16.8}{-0.4}{0.2};
-	\dimsh{0}{16.8}{-0.8}{0.2};
+	\dimsh{0}{1}{-1};
+	\dimsh{1}{40}{-1};
+	\dimsh{40}{44}{-1};
+	\dimsh{44}{83}{-1};
+	\dimsh{83}{84}{-1};
+	\dimsh{0}{84}{-2};
 	
-	\draw[densely dotted] (8, -0.2) -- (8, 1.66);
-	\draw[densely dotted] (8, 1.86) -- (8, 2.14);
-	\draw[densely dotted] (8.8, -0.2) -- (8.8, 1.66);
-	\draw[densely dotted] (8.8, 1.86) -- (8.8, 2.14);
+	\draw[densely dotted] (40, -1) -- (40, 8.3);
+	\draw[densely dotted] (40, 9.3) -- (40, 10.7);
+	\draw[densely dotted] (44, -1) -- (44, 8.3);
+	\draw[densely dotted] (44, 9.3) -- (44, 10.7);
 	
-	\dimsv{0}{0.6}{-0.4}{0.2};
-	\dimsv{0.6}{1.4}{-0.4}{0.2};
-	\dimsv{1.4}{2.6}{-0.4}{0.2};
-	\dimsv{2.6}{3.4}{-0.4}{0.2};
-	\dimsv{3.4}{4.0}{-0.4}{0.2};
-	\dimsv{0}{4.0}{-0.9}{0.2};
+	\dimsv{0}{3}{-1};
+	\dimsv{3}{7}{-1};
+	\dimsv{7}{13}{-1};
+	\dimsv{13}{17}{-1};
+	\dimsv{17}{20}{-1};
+	\dimsv{0}{20}{-2};
 	
-	\draw[densely dotted] (-0.2, 0.6) -- (0.1, 0.6);
-	\draw[densely dotted] (0.3, 0.6) -- (16.5, 0.6);
-	\draw[densely dotted] (-0.2, 1.4) -- (0.1, 1.4);
-	\draw[densely dotted] (0.3, 1.4) -- (16.5, 1.4);
-	\draw[densely dotted] (-0.2, 2.6) -- (0.1, 2.6);
-	\draw[densely dotted] (0.3, 2.6) -- (16.5, 2.6);
-	\draw[densely dotted] (-0.2, 3.4) -- (0.1, 3.4);
-	\draw[densely dotted] (0.3, 3.4) -- (16.5, 3.4);
+	\draw[densely dotted] (-1, 3) -- (0.5, 3);
+	\draw[densely dotted] (1.5, 3) -- (82.5, 3);
+	\draw[densely dotted] (-1, 7) -- (0.5, 7);
+	\draw[densely dotted] (1.5, 7) -- (82.5, 7);
+	\draw[densely dotted] (-1, 13) -- (0.5, 13);
+	\draw[densely dotted] (1.5, 13) -- (82.5, 13);
+	\draw[densely dotted] (-1, 17) -- (0.5, 17);
+	\draw[densely dotted] (1.5, 17) -- (82.5, 17);
 	
-	\dimsv{0}{1.76}{7.5}{0.2};
-	\dimsv{1.76}{2.24}{7.5}{0.2};
-	\dimsv{2.24}{4.0}{7.5}{0.2};
+	\dimsv{0}{8.8}{37.5};
+	\dimsv{8.8}{11.2}{37.5};
+	\dimsv{11.2}{20}{37.5};
 	
-	\draw[densely dotted] (7.7, 1.76) -- (7.9, 1.76);
-	\draw[densely dotted] (8.1, 1.76) -- (8.9, 1.76);
-	\draw[densely dotted] (7.7, 2.24) -- (7.9, 2.24);
-	\draw[densely dotted] (8.1, 2.24) -- (8.9, 2.24);
+	\draw[densely dotted] (38.5, 8.8) -- (39.5, 8.8);
+	\draw[densely dotted] (40.5, 8.8) -- (44.5, 8.8);
+	\draw[densely dotted] (38.5, 11.2) -- (39.5, 11.2);
+	\draw[densely dotted] (40.5, 11.2) -- (44.5, 11.2);
 
 	\end{tikzpicture}
 \caption{Base Plate.}
 \label{fig:base_plate}
 \end{figure}
+\begin{figure}[h]
+	\begin{tikzpicture}[scale=0.2, every node/.style={scale=0.2}]
+	% 84cm x 20cm x 12mm
+	% scale 1:5
+	\draw[thick] (0, 0) rectangle (84, 20);
+	\draw[thick] (0, 20) -- (1, 21) -- (85, 21) -- (84, 20);
+	\draw[thick] (85, 21) -- (85, 1) -- (84, 0);
+	\draw[dotted] (0, 0) -- (1, 1) -- (85, 1);
+	\draw[dotted] (1, 1) -- (1, 21);
+	\hole{1}{3}{6};
+	\hole{1}{7}{6};
+	\hole{1}{13}{6};
+	\hole{1}{17}{6};
+	
+	\hole{83}{3}{6};
+	\hole{83}{7}{6};
+	\hole{83}{13}{6};
+	\hole{83}{17}{6};
+	
+	\hole{40}{8.8}{5};
+	\hole{40}{11.2}{5};
+	\hole{44}{8.8}{5};
+	\hole{44}{11.2}{5};
+	
+	\dimsh{0}{1}{-1};
+	\dimsh{1}{40}{-1};
+	\dimsh{40}{44}{-1};
+	\dimsh{44}{83}{-1};
+	\dimsh{83}{84}{-1};
+	\dimsh{0}{84}{-2};
+	
+	\draw[densely dotted] (40, -1) -- (40, 8.3);
+	\draw[densely dotted] (40, 9.3) -- (40, 10.7);
+	\draw[densely dotted] (44, -1) -- (44, 8.3);
+	\draw[densely dotted] (44, 9.3) -- (44, 10.7);
+	
+	\dimsv{0}{3}{-1};
+	\dimsv{3}{7}{-1};
+	\dimsv{7}{13}{-1};
+	\dimsv{13}{17}{-1};
+	\dimsv{17}{20}{-1};
+	\dimsv{0}{20}{-2};
+	
+	\draw[densely dotted] (-1, 3) -- (0.5, 3);
+	\draw[densely dotted] (1.5, 3) -- (82.5, 3);
+	\draw[densely dotted] (-1, 7) -- (0.5, 7);
+	\draw[densely dotted] (1.5, 7) -- (82.5, 7);
+	\draw[densely dotted] (-1, 13) -- (0.5, 13);
+	\draw[densely dotted] (1.5, 13) -- (82.5, 13);
+	\draw[densely dotted] (-1, 17) -- (0.5, 17);
+	\draw[densely dotted] (1.5, 17) -- (82.5, 17);
+	
+	\dimsv{0}{8.8}{37.5};
+	\dimsv{8.8}{11.2}{37.5};
+	\dimsv{11.2}{20}{37.5};
+	
+	\draw[densely dotted] (38.5, 8.8) -- (39.5, 8.8);
+	\draw[densely dotted] (40.5, 8.8) -- (44.5, 8.8);
+	\draw[densely dotted] (38.5, 11.2) -- (39.5, 11.2);
+	\draw[densely dotted] (40.5, 11.2) -- (44.5, 11.2);
+	
+	\end{tikzpicture}
+	\caption{Base Plate 3D.}
+	\label{fig:base_plate_3d}
+\end{figure}
 
 \subsection{Side Plate}
 
 \begin{figure}[h]
-	\begin{tikzpicture}
+	\begin{tikzpicture}[scale=0.4, every node/.style={scale=0.4}]
 	% 20cm x 40cm x 20mm
-	% scale 1:2
+	% scale 2:5
 	%\draw[thick] (0, 0) rectangle (10, 20);
-	\draw[thick] (0, 0) -- (10, 0) -- (10, 20) -- (5, 20) -- (0, 10) -- (0, 0);
-	\draw[dotted] (0, 10) -- (0, 20) -- (5, 20);
-	\hole{0.6}{2.2}{1.5};
-	\hole{0.6}{3.95}{1.5};
-	\hole{2.35}{2.2}{1.5};
-	\hole{2.35}{3.95}{1.5};
+	\draw[thick] (0, 0) -- (20, 0) -- (20, 40) -- (10, 40) -- (0, 20) -- (0, 0);
+	\draw[dotted] (0, 20) -- (0, 40) -- (10, 40);
+	\hole{1.2}{4.4}{3};
+	\hole{1.2}{3.95}{3};
+	\hole{4.7}{4.4}{3};
+	\hole{4.7}{7.9}{3};
 	
-	\hole{7.65}{2.2}{1.5};
-	\hole{7.65}{3.95}{1.5};
-	\hole{9.4}{2.2}{1.5};
-	\hole{9.4}{3.95}{1.5};
+	\hole{15.3}{4.4}{3};
+	\hole{15.3}{7.9}{3};
+	\hole{18.8}{4.4}{3};
+	\hole{18.8}{7.9}{3};
 	
-	\hole{9.25}{11.75}{2};
-	\hole{9.25}{19.25}{2};
+	\hole{18.5}{23.5}{4};
+	\hole{18.5}{38.5}{4};
 	
-	\hole{6.85}{14.3}{1};
-	\hole{6.85}{16.65}{1};
-	\hole{9.2}{14.3}{1};
-	\hole{9.2}{16.65}{1};
+	\hole{13.7}{28.6}{2};
+	\hole{13.7}{33.3}{2};
+	\hole{18.4}{28.6}{2};
+	\hole{18.4}{33.3}{2};
 	
-	\hole{8.025}{15.475}{6.5};
+	\hole{16.05}{30.95}{13};
 	
 	
-	\dimsh{0}{0.6}{-0.3}{0.5};
-	\dimsh{0.6}{2.35}{-0.3}{0.5};
-	\dimsh{2.35}{7.65}{-0.3}{0.5};
-	\dimsh{7.65}{9.4}{-0.3}{0.5};
-	\dimsh{9.4}{10}{-0.3}{0.5};
-	\dimsh{0}{10}{-0.7}{0.5};
+	\dimsh{0}{1.2}{-0.3};
+	\dimsh{1.2}{4.7}{-0.3};
+	\dimsh{4.7}{15.3}{-0.3};
+	\dimsh{15.3}{18.8}{-0.3};
+	\dimsh{18.8}{20}{-0.3};
+	\dimsh{0}{20}{-0.7};
 	
-	\draw[densely dotted] (0.6, -0.2) -- (0.6, 2.1);
-	\draw[densely dotted] (0.6, 2.3) -- (0.6, 3.85);
-	\draw[densely dotted] (2.35, -0.2) -- (2.35, 2.1);
-	\draw[densely dotted] (2.35, 2.3) -- (2.35, 3.85);
-	\draw[densely dotted] (7.65, -0.2) -- (7.65, 2.1);
-	\draw[densely dotted] (7.65, 2.3) -- (7.65, 3.85);
-	\draw[densely dotted] (9.4, -0.2) -- (9.4, 2.1);
-	\draw[densely dotted] (9.4, 2.3) -- (9.4, 3.85);
+	\draw[densely dotted] (1.2, -0.2) -- (1.2, 4.2);
+	\draw[densely dotted] (1.2, 4.6) -- (1.2, 7.7);
+	\draw[densely dotted] (4.7, -0.2) -- (4.7, 4.2);
+	\draw[densely dotted] (4.7, 4.6) -- (4.7, 7.7);
+	\draw[densely dotted] (15.3, -0.2) -- (15.3, 4.2);
+	\draw[densely dotted] (15.3, 4.6) -- (15.3, 7.7);
+	\draw[densely dotted] (18.8, -0.2) -- (18.8, 4.2);
+	\draw[densely dotted] (18.8, 4.6) -- (18.8, 7.7);
 	
-	\dimsv{0}{2.2}{10.4}{0.5};
-	\dimsv{2.2}{3.95}{10.4}{0.5};
-	\dimsv{3.95}{11.75}{10.4}{0.5};
-	\dimsv{11.75}{14.3}{10.4}{0.5};
-	\dimsv{14.3}{16.65}{10.4}{0.5};
-	\dimsv{16.65}{19.25}{10.4}{0.5};
-	\dimsv{19.25}{20}{10.4}{0.5};
-	\dimsv{0}{20}{10.9}{0.5};
+	\dimsv{0}{4.4}{20.8};
+	\dimsv{4.4}{7.9}{20.8};
+	\dimsv{7.9}{23.5}{20.8};
+	\dimsv{23.5}{28.6}{20.8};
+	\dimsv{28.6}{33.3}{20.8};
+	\dimsv{33.3}{38.5}{20.8};
+	\dimsv{38.5}{40}{20.8};
+	\dimsv{0}{40}{21.8};
 	
-	\draw[densely dotted] (0.7, 2.2) -- (2.25, 2.2);
-	\draw[densely dotted] (2.45, 2.2) -- (7.55, 2.2);
-	\draw[densely dotted] (7.75, 2.2) -- (9.3, 2.2);
-	\draw[densely dotted] (9.5, 2.2) -- (10.2, 2.2);
-	\draw[densely dotted] (0.7, 3.95) -- (2.25, 3.95);
-	\draw[densely dotted] (2.45, 3.95) -- (7.55, 3.95);
-	\draw[densely dotted] (7.75, 3.95) -- (9.3, 3.95);
-	\draw[densely dotted] (9.5, 3.95) -- (10.2, 3.95);
+	\draw[densely dotted] (1.4, 4.4) -- (4.5, 4.4);
+	\draw[densely dotted] (4.9, 4.4) -- (15.1, 4.4);
+	\draw[densely dotted] (15.5, 4.4) -- (18.6, 4.4);
+	\draw[densely dotted] (19, 4.4) -- (20.4, 4.4);
+	\draw[densely dotted] (1.4, 7.9) -- (4.5, 7.9);
+	\draw[densely dotted] (4.9, 7.9) -- (15.1, 7.9);
+	\draw[densely dotted] (15.5, 7.9) -- (18.6, 7.9);
+	\draw[densely dotted] (19, 7.9) -- (20.4, 7.9);
 	
-	\draw[densely dotted] (9.35, 11.75) -- (10.2, 11.75);
-	\draw[densely dotted] (9.35, 19.25) -- (10.2, 19.25);
+	\draw[densely dotted] (18.7, 23.5) -- (20.4, 23.5);
+	\draw[densely dotted] (18.7, 38.5) -- (20.4, 38.5);
 	
-	\dimsh{0}{9.25}{11.35}{0.5};
-	\dimsh{9.25}{10}{11.35}{0.5};
+	\dimsh{0}{18.5}{22.7};
+	\dimsh{18.5}{20}{22.7};
 	
-	\draw[densely dotted] (9.25, 11.85) -- (9.25, 19.15);
+	\draw[densely dotted] (18.5, 23.7) -- (18.5, 38.3);
 	
-	\draw[densely dotted] (7, 14.3) -- (9.15, 14.3);
-	\draw[densely dotted] (9.35, 14.3) -- (10.2, 14.3);
-	\draw[densely dotted] (7, 16.65) -- (9.15, 16.65);
-	\draw[densely dotted] (9.35, 16.65) -- (10.2, 16.65);
+	\draw[densely dotted] (14, 28.6) -- (18.3, 28.6);
+	\draw[densely dotted] (18.7, 28.6) -- (20.4, 28.6);
+	\draw[densely dotted] (14, 33.3) -- (18.3, 33.3);
+	\draw[densely dotted] (18.7, 33.3) -- (20.4, 33.3);
 	
-	\dimsh{0}{6.85}{13.9}{0.5};
-	\dimsh{6.85}{9.2}{13.9}{0.5};
-	\dimsh{9.2}{10}{13.9}{0.5};
+	\dimsh{0}{13.7}{27.8};
+	\dimsh{13.7}{18.4}{27.8};
+	\dimsh{18.4}{20}{27.8};
 	
-	\draw[densely dotted] (6.85, 14) -- (6.85, 14.2);
-	\draw[densely dotted] (6.85, 14.4) -- (6.85, 16.55);
-	\draw[densely dotted] (9.2, 14) -- (9.2, 14.2);
-	\draw[densely dotted] (9.2, 14.4) -- (9.2, 16.55);
+	\draw[densely dotted] (13.7, 28) -- (13.7, 28.4);
+	\draw[densely dotted] (13.7, 28.8) -- (13.7, 33.1);
+	\draw[densely dotted] (18.4, 28) -- (18.4, 28.4);
+	\draw[densely dotted] (18.4, 28.8) -- (18.4, 33.1);
 	
 	
 	
 	\end{tikzpicture}
 \caption{Side Plate.}
 \label{fig:side_plate}
+\end{figure}
+
+\begin{figure}[h]
+	\begin{tikzpicture}[scale=0.4, every node/.style={scale=0.4}]
+	% 20cm x 40cm x 20mm
+	% scale 2:5
+	%\draw[thick] (0, 0) rectangle (10, 20);
+	\draw[thick] (0, 0) -- (20, 0) -- (20, 40) -- (10, 40) -- (0, 20) -- (0, 0);
+	\draw[thick] (20, 0) -- (21, 1) -- (21, 41)-- (20, 40);
+	\draw[thick] (10, 40) -- (11, 41) -- (21, 41);
+	\draw[dotted] (0, 0) -- (1, 1) -- (21, 1);
+	\draw[dotted] (1, 1) -- (1, 21) -- (0, 20);
+	\draw[dotted] (1, 21) -- (11, 41);
+	\draw[dotted] (0, 20) -- (0, 40) -- (10, 40);
+	\hole{1.2}{4.4}{3};
+	\hole{1.2}{3.95}{3};
+	\hole{4.7}{4.4}{3};
+	\hole{4.7}{7.9}{3};
+	
+	\hole{15.3}{4.4}{3};
+	\hole{15.3}{7.9}{3};
+	\hole{18.8}{4.4}{3};
+	\hole{18.8}{7.9}{3};
+	
+	\hole{18.5}{23.5}{4};
+	\hole{18.5}{38.5}{4};
+	
+	\hole{13.7}{28.6}{2};
+	\hole{13.7}{33.3}{2};
+	\hole{18.4}{28.6}{2};
+	\hole{18.4}{33.3}{2};
+	
+	\hole{16.05}{30.95}{13};
+	\hole{17.05}{31.95}{13};
+	\draw[dotted] (16.05, 30.95) -- (17.05, 31.95);
+	\draw[dotted] (14.75, 30.95) -- (15.75, 31.95);
+	\draw[dotted] (17.35, 30.95) -- (18.35, 31.95);
+	\draw[dotted] (16.05, 29.65) -- (17.05, 30.65);
+	\draw[dotted] (16.05, 32.25) -- (17.05, 33.25);
+	
+	
+	\dimsh{0}{1.2}{-0.3};
+	\dimsh{1.2}{4.7}{-0.3};
+	\dimsh{4.7}{15.3}{-0.3};
+	\dimsh{15.3}{18.8}{-0.3};
+	\dimsh{18.8}{20}{-0.3};
+	\dimsh{0}{20}{-0.7};
+	
+	\draw[densely dotted] (1.2, -0.2) -- (1.2, 4.2);
+	\draw[densely dotted] (1.2, 4.6) -- (1.2, 7.7);
+	\draw[densely dotted] (4.7, -0.2) -- (4.7, 4.2);
+	\draw[densely dotted] (4.7, 4.6) -- (4.7, 7.7);
+	\draw[densely dotted] (15.3, -0.2) -- (15.3, 4.2);
+	\draw[densely dotted] (15.3, 4.6) -- (15.3, 7.7);
+	\draw[densely dotted] (18.8, -0.2) -- (18.8, 4.2);
+	\draw[densely dotted] (18.8, 4.6) -- (18.8, 7.7);
+	
+	%\dimsv{0}{4.4}{20.8};
+	%\dimsv{4.4}{7.9}{20.8};
+	%\dimsv{7.9}{23.5}{20.8};
+	%\dimsv{23.5}{28.6}{20.8};
+	%\dimsv{28.6}{33.3}{20.8};
+	%\dimsv{33.3}{38.5}{20.8};
+	%\dimsv{38.5}{40}{20.8};
+	%\dimsv{0}{40}{21.8};
+	
+	\draw[densely dotted] (1.4, 4.4) -- (4.5, 4.4);
+	\draw[densely dotted] (4.9, 4.4) -- (15.1, 4.4);
+	\draw[densely dotted] (15.5, 4.4) -- (18.6, 4.4);
+	\draw[densely dotted] (19, 4.4) -- (20.4, 4.4);
+	\draw[densely dotted] (1.4, 7.9) -- (4.5, 7.9);
+	\draw[densely dotted] (4.9, 7.9) -- (15.1, 7.9);
+	\draw[densely dotted] (15.5, 7.9) -- (18.6, 7.9);
+	\draw[densely dotted] (19, 7.9) -- (20.4, 7.9);
+	
+	\draw[densely dotted] (18.7, 23.5) -- (20.4, 23.5);
+	\draw[densely dotted] (18.7, 38.5) -- (20.4, 38.5);
+	
+	\dimsh{0}{18.5}{22.7};
+	\dimsh{18.5}{20}{22.7};
+	
+	\draw[densely dotted] (18.5, 23.7) -- (18.5, 38.3);
+	
+	\draw[densely dotted] (14, 28.6) -- (18.3, 28.6);
+	\draw[densely dotted] (18.7, 28.6) -- (20.4, 28.6);
+	\draw[densely dotted] (14, 33.3) -- (18.3, 33.3);
+	\draw[densely dotted] (18.7, 33.3) -- (20.4, 33.3);
+	
+	\dimsh{0}{13.7}{27.8};
+	\dimsh{13.7}{18.4}{27.8};
+	\dimsh{18.4}{20}{27.8};
+	
+	\draw[densely dotted] (13.7, 28) -- (13.7, 28.4);
+	\draw[densely dotted] (13.7, 28.8) -- (13.7, 33.1);
+	\draw[densely dotted] (18.4, 28) -- (18.4, 28.4);
+	\draw[densely dotted] (18.4, 28.8) -- (18.4, 33.1);
+	
+	
+	
+	\end{tikzpicture}
+	\caption{Side Plate 3D.}
+	\label{fig:side_plate_3d}
+\end{figure}
+\subsection{Rear Plate}
+\begin{figure}[h]
+	\begin{tikzpicture}[scale=0.2, every node/.style={scale=0.2}]
+	% 84cm x 18cm x 10mm
+	% scale 1:5
+	\draw[thick] (0, 0) rectangle (84, 18);
+	\hole{1}{4}{3};
+	\hole{1}{14}{3};
+	\hole{83}{4}{3};
+	\hole{83}{14}{3};
+	
+	\hole{7}{1.5}{3};
+	\hole{7}{16.5}{3};
+	\hole{17}{1.5}{3};
+	\hole{17}{16.5}{3};
+	\hole{27}{1.5}{3};
+	\hole{27}{16.5}{3};
+	\hole{37}{1.5}{3};
+	\hole{37}{16.5}{3};
+	\hole{47}{1.5}{3};
+	\hole{47}{16.5}{3};
+	\hole{57}{1.5}{3};
+	\hole{57}{16.5}{3};
+	\hole{67}{1.5}{3};
+	\hole{67}{16.5}{3};
+	\hole{77}{1.5}{3};
+	\hole{77}{16.5}{3};
+	
+	\dimsh{0}{7}{-0.4};
+	\dimsh{7}{17}{-0.4};
+	\dimsh{17}{27}{-0.4};
+	\dimsh{27}{37}{-0.4};
+	\dimsh{37}{47}{-0.4};
+	\dimsh{47}{57}{-0.4};
+	\dimsh{57}{67}{-0.4};
+	\dimsh{67}{77}{-0.4};
+	\dimsh{77}{84}{-0.4};
+	\end{tikzpicture}
+\caption{Rear Plate.}
+\label{fig:rear_plate}
+\end{figure}
+\begin{figure}[h]
+	\begin{tikzpicture}[scale=0.2, every node/.style={scale=0.2}]
+	% 84cm x 18cm x 10mm
+	% scale 1:5
+	\draw[thick] (0, 0) rectangle (84, 18);
+	\draw[thick] (0, 18) -- (1, 19) -- (85, 19) -- (84, 18);
+	\draw[thick] (85, 19) -- (85, 1) -- (84, 0);
+	\draw[dotted] (0, 0) -- (1, 1) -- (85, 1);
+	\draw[dotted] (1, 1) -- (1, 19);
+	\hole{1}{4}{3};
+	\hole{1}{14}{3};
+	\hole{83}{4}{3};
+	\hole{83}{14}{3};
+	
+	\hole{7}{1.5}{3};
+	\hole{7}{16.5}{3};
+	\hole{17}{1.5}{3};
+	\hole{17}{16.5}{3};
+	\hole{27}{1.5}{3};
+	\hole{27}{16.5}{3};
+	\hole{37}{1.5}{3};
+	\hole{37}{16.5}{3};
+	\hole{47}{1.5}{3};
+	\hole{47}{16.5}{3};
+	\hole{57}{1.5}{3};
+	\hole{57}{16.5}{3};
+	\hole{67}{1.5}{3};
+	\hole{67}{16.5}{3};
+	\hole{77}{1.5}{3};
+	\hole{77}{16.5}{3};
+	
+	\dimsh{0}{7}{-0.4};
+	\dimsh{7}{17}{-0.4};
+	\dimsh{17}{27}{-0.4};
+	\dimsh{27}{37}{-0.4};
+	\dimsh{37}{47}{-0.4};
+	\dimsh{47}{57}{-0.4};
+	\dimsh{57}{67}{-0.4};
+	\dimsh{67}{77}{-0.4};
+	\dimsh{77}{84}{-0.4};
+	\end{tikzpicture}
+	\caption{Rear Plate 3D.}
+	\label{fig:rear_plate_3d}
+\end{figure}
+
+\subsection{Rear Mount}
+\begin{figure}[h]
+	\begin{tikzpicture}[scale=0.5, every node/.style={scale=0.5}]
+	% 16cm x 30cm x 15mm
+	% scale 1:2
+	\draw[thick] (0, 0) rectangle (16, 30);
+	\hole{0.65}{3.6}{3};
+	\hole{0.65}{7.1}{3};
+	\hole{4.15}{3.6}{3};
+	\hole{4.15}{7.1}{3};
+	\hole{11.85}{3.6}{3};
+	\hole{11.85}{7.1}{3};
+	\hole{15.35}{3.6}{3};
+	\hole{15.35}{7.1}{3};
+	
+	\end{tikzpicture}
+	\caption{Rear Mount.}
+	\label{fig:rear_mount}
+\end{figure}
+\begin{figure}[h]
+	\begin{tikzpicture}[scale=0.5, every node/.style={scale=0.5}]
+	% 16cm x 30cm x 15mm
+	% scale 1:2
+	\draw[thick] (0, 0) rectangle (16, 30);
+	\draw[thick] (0, 30) -- (1, 31) -- (17, 31) -- (16, 30);
+	\draw[thick] (17, 31) -- (17, 1) -- (16, 0);
+	\draw[dotted] (0, 0) -- (1, 1) -- (17, 1);
+	\draw[dotted] (1, 1) -- (1, 31);
+	\hole{0.65}{3.6}{3};
+	\hole{0.65}{7.1}{3};
+	\hole{4.15}{3.6}{3};
+	\hole{4.15}{7.1}{3};
+	\hole{11.85}{3.6}{3};
+	\hole{11.85}{7.1}{3};
+	\hole{15.35}{3.6}{3};
+	\hole{15.35}{7.1}{3};
+	
+	\end{tikzpicture}
+	\caption{Rear Mount 3D.}
+	\label{fig:rear_mount_3d}
+\end{figure}
+
+\subsection{Spindle Mount}
+\begin{figure}[h]
+	\begin{tikzpicture}[scale=0.4, every node/.style={scale=0.4}]
+	% 16cm x 40cm x 15mm
+	% scale 2:5
+	\draw[thick] (0, 0) rectangle (16, 40);
+	\hole{2.4}{2}{3};
+	\hole{2.4}{8}{3};
+	\hole{2.4}{14}{3};
+	\hole{2.4}{20}{3};
+	\hole{2.4}{26}{3};
+	\hole{2.4}{32}{3};
+	\hole{2.4}{38}{3};
+	\hole{13.6}{2}{3};
+	\hole{13.6}{8}{3};
+	\hole{13.6}{14}{3};
+	\hole{13.6}{20}{3};
+	\hole{13.6}{26}{3};
+	\hole{13.6}{32}{3};
+	\hole{13.6}{38}{3};
+	\end{tikzpicture}
+	\caption{Spindle Mount.}
+	\label{fig:spindle_mount}
+\end{figure}
+\begin{figure}[h]
+	\begin{tikzpicture}[scale=0.4, every node/.style={scale=0.4}]
+	% 16cm x 40cm x 15mm
+	% scale 2:5
+	\draw[thick] (0, 0) rectangle (16, 40);
+	\draw[thick] (0, 40) -- (1, 41) -- (17, 41) -- (16, 40);
+	\draw[thick] (17, 41) -- (17, 1) -- (16, 0);
+	\draw[dotted] (0, 0) -- (1, 1) -- (17, 1);
+	\draw[dotted] (1, 1) -- (1, 41);
+	\hole{2.4}{2}{3};
+	\hole{2.4}{8}{3};
+	\hole{2.4}{14}{3};
+	\hole{2.4}{20}{3};
+	\hole{2.4}{26}{3};
+	\hole{2.4}{32}{3};
+	\hole{2.4}{38}{3};
+	\hole{13.6}{2}{3};
+	\hole{13.6}{8}{3};
+	\hole{13.6}{14}{3};
+	\hole{13.6}{20}{3};
+	\hole{13.6}{26}{3};
+	\hole{13.6}{32}{3};
+	\hole{13.6}{38}{3};
+	\end{tikzpicture}
+	\caption{Spindle Mount 3D.}
+	\label{fig:spindle_mount_3d}
 \end{figure}
 
 \end{document}
