@@ -503,19 +503,58 @@
 \end{figure}
 
 \subsection{Rear Mount}
+KPF-S 20 has been used as linear mount.
 \begin{figure}[h]
 	\begin{tikzpicture}[scale=0.5, every node/.style={scale=0.5}]
 	% 16cm x 30cm x 15mm
 	% scale 1:2
 	\draw[thick] (0, 0) rectangle (16, 30);
-	\hole{0.65}{3.6}{3};
-	\hole{0.65}{7.1}{3};
-	\hole{4.15}{3.6}{3};
-	\hole{4.15}{7.1}{3};
-	\hole{11.85}{3.6}{3};
-	\hole{11.85}{7.1}{3};
-	\hole{15.35}{3.6}{3};
-	\hole{15.35}{7.1}{3};
+	% horizontal waggon mount - lower
+	\hole{2}{1.8}{3};
+	\hole{2}{5}{3};
+	\hole{5.6}{1.8}{3};
+	\hole{5.6}{5}{3};
+	\hole{10.4}{1.8}{3};
+	\hole{10.4}{5}{3};
+	\hole{14}{1.8}{3};
+	\hole{14}{5}{3};
+	% horizontal waggon mount - upper
+	\hole{2}{16.8}{3};
+	\hole{2}{20}{3};
+	\hole{5.6}{16.8}{3};
+	\hole{5.6}{20}{3};
+	\hole{10.4}{16.8}{3};
+	\hole{10.4}{20}{3};
+	\hole{14}{16.8}{3};
+	\hole{14}{20}{3};
+	% horizontal spindle mount
+	\hole{6.2}{8.9}{3};
+	\hole{6.2}{12.9}{3};
+	\hole{8.6}{8.9}{3};
+	\hole{8.6}{12.9}{3};
+	% vertical waggon mount - lower
+	\hole{0.8}{8}{3};
+	\hole{0.8}{11.6}{3};
+	\hole{4}{8}{3};
+	\hole{4}{11.6}{3};
+	\hole{12}{8}{3};
+	\hole{12}{11.6}{3};
+	\hole{15.2}{8}{3};
+	\hole{15.2}{11.6}{3};
+	% vertical waggon mount - upper
+	\hole{0.8}{23}{3};
+	\hole{0.8}{26.6}{3};
+	\hole{4}{23}{3};
+	\hole{4}{26.6}{3};
+	\hole{12}{23}{3};
+	\hole{12}{26.6}{3};
+	\hole{15.2}{23}{3};
+	\hole{15.2}{26.6}{3};
+	% vertical spindle mount
+	\hole{6}{21.6}{3};
+	\hole{6}{24}{3};
+	\hole{10}{21.6}{3};
+	\hole{10}{24}{3};
 	
 	\end{tikzpicture}
 	\caption{Rear Mount.}
@@ -530,26 +569,72 @@
 	\draw[thick] (17, 31) -- (17, 1) -- (16, 0);
 	\draw[dotted] (0, 0) -- (1, 1) -- (17, 1);
 	\draw[dotted] (1, 1) -- (1, 31);
-	\hole{0.65}{3.6}{3};
-	\hole{0.65}{7.1}{3};
-	\hole{4.15}{3.6}{3};
-	\hole{4.15}{7.1}{3};
-	\hole{11.85}{3.6}{3};
-	\hole{11.85}{7.1}{3};
-	\hole{15.35}{3.6}{3};
-	\hole{15.35}{7.1}{3};
+	% horizontal waggon mount - lower
+	\hole{2}{1.8}{3};
+	\hole{2}{5}{3};
+	\hole{5.6}{1.8}{3};
+	\hole{5.6}{5}{3};
+	\hole{10.4}{1.8}{3};
+	\hole{10.4}{5}{3};
+	\hole{14}{1.8}{3};
+	\hole{14}{5}{3};
+	% horizontal waggon mount - upper
+	\hole{2}{16.8}{3};
+	\hole{2}{20}{3};
+	\hole{5.6}{16.8}{3};
+	\hole{5.6}{20}{3};
+	\hole{10.4}{16.8}{3};
+	\hole{10.4}{20}{3};
+	\hole{14}{16.8}{3};
+	\hole{14}{20}{3};
+	% horizontal spindle mount
+	\hole{6.2}{8.9}{3};
+	\hole{6.2}{12.9}{3};
+	\hole{8.6}{8.9}{3};
+	\hole{8.6}{12.9}{3};
+	% vertical waggon mount - lower
+	\hole{0.8}{8}{3};
+	\hole{0.8}{11.6}{3};
+	\hole{4}{8}{3};
+	\hole{4}{11.6}{3};
+	\hole{12}{8}{3};
+	\hole{12}{11.6}{3};
+	\hole{15.2}{8}{3};
+	\hole{15.2}{11.6}{3};
+	% vertical waggon mount - upper
+	\hole{0.8}{23}{3};
+	\hole{0.8}{26.6}{3};
+	\hole{4}{23}{3};
+	\hole{4}{26.6}{3};
+	\hole{12}{23}{3};
+	\hole{12}{26.6}{3};
+	\hole{15.2}{23}{3};
+	\hole{15.2}{26.6}{3};
+	% vertical spindle mount
+	\hole{6}{21.6}{3};
+	\hole{6}{24}{3};
+	\hole{10}{21.6}{3};
+	\hole{10}{24}{3};
 	
 	\end{tikzpicture}
 	\caption{Rear Mount 3D.}
 	\label{fig:rear_mount_3d}
 \end{figure}
 
-\subsection{Spindle Mount}
+\subsection{Spindle Z Mount}
 \begin{figure}[h]
 	\begin{tikzpicture}[scale=0.4, every node/.style={scale=0.4}]
 	% 16cm x 40cm x 15mm
 	% scale 2:5
 	\draw[thick] (0, 0) rectangle (16, 40);
+	\hole{4.5}{1.7}{3.5};
+	\hole{11.5}{1.7}{3.5};
+	\hole{4.5}{3}{3.5};
+	\hole{4.5}{6.3}{3.5};
+	\hole{11.5}{3}{3.5};
+	\hole{11.5}{6.3}{3.5};
+	
+	
 	\hole{2.4}{2}{3};
 	\hole{2.4}{8}{3};
 	\hole{2.4}{14}{3};
@@ -564,9 +649,10 @@
 	\hole{13.6}{26}{3};
 	\hole{13.6}{32}{3};
 	\hole{13.6}{38}{3};
+	
 	\end{tikzpicture}
-	\caption{Spindle Mount.}
-	\label{fig:spindle_mount}
+	\caption{Spindle Z Mount - Main.}
+	\label{fig:spindle_z_mount_main}
 \end{figure}
 \begin{figure}[h]
 	\begin{tikzpicture}[scale=0.4, every node/.style={scale=0.4}]
@@ -577,6 +663,14 @@
 	\draw[thick] (17, 41) -- (17, 1) -- (16, 0);
 	\draw[dotted] (0, 0) -- (1, 1) -- (17, 1);
 	\draw[dotted] (1, 1) -- (1, 41);
+	\hole{4.5}{1.7}{3.5};
+	\hole{11.5}{1.7}{3.5};
+	\hole{4.5}{3}{3.5};
+	\hole{4.5}{6.3}{3.5};
+	\hole{11.5}{3}{3.5};
+	\hole{11.5}{6.3}{3.5};
+	
+	
 	\hole{2.4}{2}{3};
 	\hole{2.4}{8}{3};
 	\hole{2.4}{14}{3};
@@ -592,8 +686,101 @@
 	\hole{13.6}{32}{3};
 	\hole{13.6}{38}{3};
 	\end{tikzpicture}
-	\caption{Spindle Mount 3D.}
-	\label{fig:spindle_mount_3d}
+	\caption{Spindle Z Mount - Main 3D.}
+	\label{fig:spindle_z_mount_main_3d}
 \end{figure}
-
+\begin{figure}[h]
+	\begin{tikzpicture}
+	% 16cm x 8cm x 15mm
+	% scale 1:1
+	\draw[thick] (0, 0) rectangle (16, 8);
+	\hole{1}{0.75}{3};
+	\hole{4}{0.75}{3};
+	\hole{12}{0.75}{3};
+	\hole{15}{0.75}{3};
+	
+	\hole{2.4}{2.5}{3.5};
+	\hole{13.6}{2.5}{3.5};
+	
+	\hole{8}{4.5}{13};
+	
+	\hole{5.8}{4.5}{2.5};
+	\hole{8}{2.3}{2.5};
+	\hole{8}{6.7}{2.5};
+	\hole{10.2}{4.5}{2.5};
+	
+	\hole{5.625}{2.125}{2.5};
+	\hole{5.625}{6.875}{2.5};
+	\hole{10.375}{2.125}{2.5};
+	\hole{10.375}{6.875}{2.5};
+	\end{tikzpicture}
+	\caption{Spindle Z Mount - Upper.}
+	\label{fig:spindle_z_mount_upper}
+\end{figure}
+\begin{figure}[h]
+	\begin{tikzpicture}
+	% 16cm x 8cm x 15mm
+	% scale 1:1
+	\draw[thick] (0, 0) rectangle (16, 8);
+	\draw[thick] (0, 8) -- (1, 9) -- (17, 9) -- (16, 8);
+	\draw[thick] (17, 9) -- (17, 1) -- (16, 0);
+	\draw[dotted] (0, 0) -- (1, 1) -- (17, 1);
+	\draw[dotted] (1, 1) -- (1, 9);
+	\hole{1}{0.75}{3};
+	\hole{4}{0.75}{3};
+	\hole{12}{0.75}{3};
+	\hole{15}{0.75}{3};
+	
+	\hole{2.4}{2.5}{3.5};
+	\hole{13.6}{2.5}{3.5};
+	
+	\hole{8}{4.5}{13};
+	
+	\hole{5.8}{4.5}{2.5};
+	\hole{8}{2.3}{2.5};
+	\hole{8}{6.7}{2.5};
+	\hole{10.2}{4.5}{2.5};
+	
+	\hole{5.625}{2.125}{2.5};
+	\hole{5.625}{6.875}{2.5};
+	\hole{10.375}{2.125}{2.5};
+	\hole{10.375}{6.875}{2.5};
+	\end{tikzpicture}
+	\caption{Spindle Z Mount - Upper 3D.}
+	\label{fig:spindle_z_mount_upper_3d}
+\end{figure}
+\begin{figure}[h]
+	\begin{tikzpicture}
+	% 9cm x 8cm x 15mm
+	% scale 1:1
+	\draw[thick] (0, 0) rectangle (9, 8);
+	\hole{4.5}{3}{13};
+	
+	\hole{2.4}{3}{2.5};
+	\hole{4.5}{0.9}{2.5};
+	\hole{4.5}{5.1}{2.5};
+	\hole{6.6}{3}{2.5};
+	\end{tikzpicture}
+	\caption{Spindle Z Mount - Lower.}
+	\label{fig:spindle_z_mount_lower}
+\end{figure}
+\begin{figure}[h]
+	\begin{tikzpicture}
+	% 9cm x 8cm x 15mm
+	% scale 1:1
+	\draw[thick] (0, 0) rectangle (9, 8);
+	\draw[thick] (0, 8) -- (1, 9) -- (10, 9) -- (9, 8);
+	\draw[thick] (10, 9) -- (10, 1) -- (9, 0);
+	\draw[dotted] (0, 0) -- (1, 1) -- (10, 1);
+	\draw[dotted] (1, 1) -- (1, 9);
+	\hole{4.5}{3}{13};
+	
+	\hole{2.4}{3}{2.5};
+	\hole{4.5}{0.9}{2.5};
+	\hole{4.5}{5.1}{2.5};
+	\hole{6.6}{3}{2.5};
+	\end{tikzpicture}
+	\caption{Spindle Z Mount - Lower 3D.}
+	\label{fig:spindle_z_mount_lower_3d}
+\end{figure}
 \end{document}
