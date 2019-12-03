@@ -609,6 +609,10 @@ KPF-S 20 has been used as linear mount.
 	\hole{11.8}{20}{3};
 	\hole{15.4}{16.8}{3};
 	\hole{15.4}{20}{3};
+	% lower mount
+	\hole{5.4}{1.7}{3.5};
+	\hole{10.6}{1.7}{3.5};
+	\draw[densely dotted] (4.5, 0.95) rectangle (11.5, 2.45);
 	% horizontal spindle mount
 	\hole{6.8}{8.9}{3};
 	\hole{6.8}{12.9}{3};
@@ -743,20 +747,23 @@ Loslager FF12 will be connected to this part.
 \begin{figure}[h]
 	\centering
 	\begin{tikzpicture}
-	% 9cm x 5cm x 15mm
+	% 7cm x 5cm x 15mm
 	% scale 1:1
-	\draw[thick] (0, 0) rectangle (9, 5);
-	\hole{4.5}{3}{13};
+	\draw[thick] (0, 0) rectangle (7, 5.4);
+	\draw[densely dotted] (0.6, 0) --(0.6, 2) -- (1.2, 2) -- (1.2, 0);
+	\draw[densely dotted] (5.8, 0) -- (5.8, 2) -- (6.4, 2) -- (6.4, 0);
+	
+	\hole{3.5}{3}{13};
 	
 	%\hole{2.4}{3}{2.5};
 	%\hole{4.5}{0.9}{2.5};
 	%\hole{4.5}{5.1}{2.5};
 	%\hole{6.6}{3}{2.5};
 	
-	\hole{3}{1.5}{2.5};
-	\hole{3}{4.5}{2.5};
-	\hole{6}{1.5}{2.5};
-	\hole{6}{4.5}{2.5};
+	\hole{2}{1.5}{2.5};
+	\hole{2}{4.5}{2.5};
+	\hole{5}{1.5}{2.5};
+	\hole{5}{4.5}{2.5};
 	\end{tikzpicture}
 	\caption{Spindle Z Mount - Lower.}
 	\label{fig:spindle_z_mount_lower}
@@ -764,24 +771,28 @@ Loslager FF12 will be connected to this part.
 \begin{figure}[h]
 	\centering
 	\begin{tikzpicture}
-	% 9cm x 5cm x 15mm
+	% 7cm x 5cm x 15mm
 	% scale 1:1
-	\draw[thick] (0, 0) rectangle (9, 5);
-	\draw[thick] (0, 5) -- (1, 6) -- (10, 6) -- (9, 5);
-	\draw[thick] (10, 6) -- (10, 1) -- (9, 0);
-	\draw[dotted] (0, 0) -- (1, 1) -- (10, 1);
-	\draw[dotted] (1, 1) -- (1, 6);
-	\hole{4.5}{3}{13};
+	\draw[thick] (0, 0) rectangle (7, 5.4);
+	\draw[thick] (0, 5.4) -- (1, 6.4) -- (8, 6.4) -- (7, 5.4);
+	\draw[thick] (8, 6.4) -- (8, 1) -- (7, 0);
+	\draw[dotted] (0, 0) -- (1, 1) -- (8, 1);
+	\draw[dotted] (1, 1) -- (1, 6.4);
+	
+	\draw[densely dotted] (1.1, 0.5) --(1.1, 2.5) -- (1.7, 2.5) -- (1.7, 0.5);
+	\draw[densely dotted] (6.3, 0.5) -- (6.3, 2.5) -- (6.9, 2.5) -- (6.9, 0.5);
+	
+	\hole{3.5}{3}{13};
 	
 	%\hole{2.4}{3}{2.5};
 	%\hole{4.5}{0.9}{2.5};
 	%\hole{4.5}{5.1}{2.5};
 	%\hole{6.6}{3}{2.5};
 	
-	\hole{3}{1.5}{2.5};
-	\hole{3}{4.5}{2.5};
-	\hole{6}{1.5}{2.5};
-	\hole{6}{4.5}{2.5};
+	\hole{2}{1.5}{2.5};
+	\hole{2}{4.5}{2.5};
+	\hole{5}{1.5}{2.5};
+	\hole{5}{4.5}{2.5};
 	\end{tikzpicture}
 	\caption{Spindle Z Mount - Lower 3D.}
 	\label{fig:spindle_z_mount_lower_3d}
