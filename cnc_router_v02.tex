@@ -1,5 +1,5 @@
-\documentclass[hidelinks, 11pt, fleqn]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
-\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\documentclass[a4paper, hidelinks, 11pt, fleqn]{article}
+\usepackage{geometry}
 \usepackage{wrapfig}
 \usepackage{tikz}
 \usetikzlibrary{decorations.pathreplacing}
@@ -8,8 +8,6 @@
 \usepackage{color}
 \usepackage{amsmath}
 \usepackage{mathtools}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
 \geometry{letterpaper}
 \usepackage{graphicx}
 \usepackage{subcaption}
@@ -96,7 +94,7 @@
 \section{Portal}
 \subsection{Spindle X mount}
 \subsubsection{Base Plate}
-\begin{figure}[h!]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}[scale=0.2, every node/.style={scale=0.2}]
 	% 84cm x 20cm x 12mm
@@ -159,7 +157,7 @@
 \caption{Base Plate.}
 \label{fig:base_plate}
 \end{figure}
-\begin{figure}[h!]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}[scale=0.2, every node/.style={scale=0.2}]
 	% 84cm x 20cm x 12mm
@@ -233,14 +231,17 @@
 	\caption{Base Plate 3D.}
 	\label{fig:base_plate_3d}
 \end{figure}
+\newpage
 \subsubsection{Front Plate}
-\begin{figure}[h!]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}[scale=0.8, every node/.style={scale=0.8}]
 	% 15cm x 9cm x 12mm
 	% scale 1:5
 	%\draw[thick] (0, 0) rectangle (15, 9);
 	\draw[thick] (0, 9) -- (15, 9) -- (15, 6) -- (11, 0) -- (4, 0) -- (0, 6) -- (0, 9);
+	\draw[dotted] (0, 6) -- (0, 0) -- (4, 0);
+	\draw[dotted] (11, 0) -- (15, 0) -- (15, 6);
 	\hole{1.5}{8}{3};
 	\hole{5.5}{8}{3};
 	\hole{9.5}{8}{3};
@@ -253,11 +254,52 @@
 	\hole{9.875}{1.625}{2.5};
 	\hole{9.875}{6.375}{2.5};
 	
+	\dimsh{0}{1.5}{-0.4};
+	\dimsh{1.5}{5.5}{-0.4};
+	\dimsh{5.5}{9.5}{-0.4};
+	\dimsh{9.5}{13.5}{-0.4};
+	\dimsh{13.5}{15}{-0.4};
+	\dimsh{0}{15}{-0.8};
+	
+	\draw[densely dotted] (1.5, -0.2) -- (1.5, 7.8);
+	\draw[densely dotted] (5.5, -0.2) -- (5.5, 7.8);
+	\draw[densely dotted] (9.5, -0.2) -- (9.5, 7.8);
+	\draw[densely dotted] (13.5, -0.2) -- (13.5, 7.8);
+	
+	\dimsh{0}{5.125}{7};
+	\dimsh{5.125}{7.5}{7};
+	\dimsh{7.5}{9.875}{7};
+	\dimsh{9.875}{15}{7};
+	
+	\draw[densely dotted] (5.125, 6.8) -- (5.125, 6.5);
+	\draw[densely dotted] (5.125, 6.1) -- (5.125, 1.8);
+	\draw[densely dotted] (7.5, 6.8) -- (7.5, 5.5);
+	\draw[densely dotted] (9.875, 6.8) -- (9.875, 6.5);
+	\draw[densely dotted] (9.875, 6.1) -- (9.875, 1.8);
+	
+	\dimsv{0}{1.625}{-0.4};
+	\dimsv{1.625}{4}{-0.4};
+	\dimsv{4}{6.375}{-0.4};
+	\dimsv{6.375}{8}{-0.4};
+	\dimsv{8}{9}{-0.4};
+	\dimsv{0}{9}{-1};
+	
+	\draw[densely dotted] (-0.1, 1.625) -- (5, 1.625);
+	\draw[densely dotted] (5.3, 1.625) -- (9.6, 1.625);
+	\draw[densely dotted] (-0.1, 4) -- (7, 4);
+	\draw[densely dotted] (-0.1, 6.375) -- (5, 6.375);
+	\draw[densely dotted] (5.3, 6.375) -- (9.6, 6.375);
+	
+	\draw[densely dotted] (-0.1, 8) -- (1.3, 8);
+	\draw[densely dotted] (1.7, 8) -- (5.3, 8);
+	\draw[densely dotted] (5.7, 8) -- (9.3, 8);
+	\draw[densely dotted] (9.7, 8) -- (13.3, 8);
+	
 	\end{tikzpicture}
 	\caption{Front Plate.}
 	\label{fig:front_plate}
 \end{figure}
-\begin{figure}[h!]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}[scale=0.8, every node/.style={scale=0.8}]
 	% 15cm x 9cm x 12mm
@@ -289,7 +331,7 @@
 \end{figure}
 \subsection{Spindle Y mount}
 \subsubsection{Side Plate}
-\begin{figure}[h]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}[scale=0.4, every node/.style={scale=0.4}]
 	% 20cm x 40cm x 20mm
@@ -380,8 +422,8 @@
 \caption{Side Plate.}
 \label{fig:side_plate}
 \end{figure}
-
-\begin{figure}[h]
+\newpage
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}[scale=0.4, every node/.style={scale=0.4}]
 	% 20cm x 40cm x 20mm
@@ -483,9 +525,9 @@
 	\caption{Side Plate 3D.}
 	\label{fig:side_plate_3d}
 \end{figure}
-
+\newpage
 \subsubsection{Rear Plate}
-\begin{figure}[h]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}[scale=0.2, every node/.style={scale=0.2}]
 	% 84cm x 18cm x 10mm
@@ -526,7 +568,7 @@
 \caption{Rear Plate.}
 \label{fig:rear_plate}
 \end{figure}
-\begin{figure}[h]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}[scale=0.2, every node/.style={scale=0.2}]
 	% 84cm x 18cm x 10mm
@@ -571,10 +613,11 @@
 	\caption{Rear Plate 3D.}
 	\label{fig:rear_plate_3d}
 \end{figure}
+\newpage
 \subsection{Spindle Z Mount}
 \subsubsection{Main}
 KPF-S 20 has been used as linear mount.
-\begin{figure}[h]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}[scale=0.4, every node/.style={scale=0.4}]
 	% 16cm x 40cm x 15mm
@@ -631,7 +674,8 @@ KPF-S 20 has been used as linear mount.
 	\caption{Spindle Z Mount - Main.}
 	\label{fig:spindle_z_mount_main}
 \end{figure}
-\begin{figure}[h]
+\newpage
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}[scale=0.4, every node/.style={scale=0.4}]
 	% 16cm x 40cm x 15mm
@@ -688,8 +732,9 @@ KPF-S 20 has been used as linear mount.
 	\caption{Spindle Z Mount - Main 3D.}
 	\label{fig:spindle_z_mount_main_3d}
 \end{figure}
+\newpage
 \subsubsection{Upper}
-\begin{figure}[h]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}
 	% 16cm x 8cm x 15mm
@@ -720,7 +765,8 @@ KPF-S 20 has been used as linear mount.
 	\caption{Spindle Z Mount - Upper.}
 	\label{fig:spindle_z_mount_upper}
 \end{figure}
-\begin{figure}[h]
+\newpage
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}
 	% 16cm x 8cm x 15mm
@@ -755,9 +801,10 @@ KPF-S 20 has been used as linear mount.
 	\caption{Spindle Z Mount - Upper 3D.}
 	\label{fig:spindle_z_mount_upper_3d}
 \end{figure}
+\newpage
 \subsubsection{Lower}
 Loslager FF12 will be connected to this part.
-\begin{figure}[h]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}
 	% 7cm x 5cm x 15mm
@@ -782,7 +829,7 @@ Loslager FF12 will be connected to this part.
 	\caption{Spindle Z Mount - Lower.}
 	\label{fig:spindle_z_mount_lower}
 \end{figure}
-\begin{figure}[h]
+\begin{figure}[ht!]
 	\centering
 	\begin{tikzpicture}
 	% 7cm x 5cm x 15mm
@@ -818,12 +865,13 @@ Loslager FF12 will be connected to this part.
 	\caption{Spindle Z Mount - Lower 3D.}
 	\label{fig:spindle_z_mount_lower_3d}
 \end{figure}
+\newpage
 \subsubsection{Drill Mount}
-\begin{figure}[h]
+\begin{figure}[ht!]
 	\centering
-	\begin{tikzpicture}[scale=0.6, every node/.style={scale=0.6}]
+	\begin{tikzpicture}
 	% 16cm x 22cm x 15mm
-	% scale 1:2
+	% scale 1:1
 	%\draw[thick] (0, 0) rectangle (16, 22);
 	\draw[thick] (3, 0) -- (13, 0) -- (13, 4) -- (16, 7) -- (16, 22) -- (0, 22) -- (0, 7) -- (3, 4) -- (3, 0);
 	% drill mount
@@ -859,11 +907,12 @@ Loslager FF12 will be connected to this part.
 	\caption{Drill Mount.}
 	\label{fig:drill_mount}
 \end{figure}
-\begin{figure}[h]
+\newpage
+\begin{figure}[ht!]
 	\centering
-	\begin{tikzpicture}[scale=0.6, every node/.style={scale=0.6}]
+	\begin{tikzpicture}
 	% 16cm x 22cm x 15mm
-	% scale 1:2
+	% scale 1:1
 	\draw[thick] (3, 0) -- (13, 0) -- (13, 4) -- (16, 7) -- (16, 22) -- (0, 22) -- (0, 7) -- (3, 4) -- (3, 0);
 	\draw[thick] (0, 22) -- (1, 23) -- (17, 23) -- (16, 22);
 	\draw[thick] (17, 23) -- (17, 8) -- (16, 7);
@@ -906,11 +955,12 @@ Loslager FF12 will be connected to this part.
 	\caption{Drill Mount 3D.}
 	\label{fig:drill_mount_3d}
 \end{figure}
-\begin{figure}[h]
+\newpage
+\begin{figure}[ht!]
 	\centering
-	\begin{tikzpicture}[scale=0.6, every node/.style={scale=0.6}]
+	\begin{tikzpicture}
 	% 16cm x 13.8cm x 5mm
-	% scale 1:2
+	% scale 1:1
 	\draw[thick] (0, 0) rectangle (16, 13.8);
 	% vertical waggon mount - lower
 	\hole{0.8}{0.8}{3};
