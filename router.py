@@ -8,8 +8,6 @@ import logging.config
 from argparse import ArgumentParser
 from multiprocessing import Process
 
-import RPi.GPIO as GPIO
-
 from gpio_handler import GPIOHandler
 from stepper import Stepper
 from motion_planner import MotionPlanner
