@@ -32,20 +32,17 @@ class GPIOHandler(object):
     def set_output_pins(self, gpios):
         self.logger.debug("Setting GPIO output pins: {}".format(sorted(gpios)))
         if not self.debug:
-            for gpio in gpios:
-                GPIO.setup(gpio, GPIO.OUT)
+            GPIO.setup(gpios, GPIO.OUT)
 
     def set_input_pins(self, gpios):
         self.logger.debug("Setting GPIO input pins: {}".format(gpios))
         if not self.debug:
-            for gpio in gpios:
-                GPIO.setup(gpio, GPIO.IN)
+            GPIO.setup(gpios, GPIO.IN)
 
     def default_output_pins(self, gpios):
         self.logger.debug("Defaulting GPIO output pins: {}".format(sorted(gpios)))
         if not self.debug:
-            for gpio in gpios:
-                GPIO.output(gpio, False)
+            GPIO.output(gpios, False)
 
     def cleanup(self):
         self.logger.debug("Cleaning up GPIOs")
