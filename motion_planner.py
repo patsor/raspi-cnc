@@ -9,7 +9,7 @@ from argparse import ArgumentParser
 
 
 class MotionPlanner(object):
-    def __init__(self, name, motion_type, ramp_type, step_angle, travel_per_rev, mode, accel, traverse_rate, feed_rate, db, debug=False):
+    def __init__(self, name, motion_type, ramp_type, step_angle, travel_per_rev, mode, accel, traverse_rate, feed_rate, debug=False):
         self.name = name
         self.motion_type = motion_type
         self.ramp_type = ramp_type
@@ -17,60 +17,19 @@ class MotionPlanner(object):
         self.travel_per_rev = travel_per_rev
         self.mode = mode
         self.accel = accel
-        self.logger = logging.getLogger("MotionPlanner")
-        self.db = db
+        self.logger = logging.getLogger(self.name)
         self.debug = debug
 
         self.t_accel = {}
         self.n_accel = {}
-        rp_traverse = self.get_profile_from_db(ramp_type, traverse_rate, accel, 0)
-        if rp_traverse:
-            self.logger.debug("Ramp profile loaded from DB.")
-            self.t_accel["traverse"] = rp_traverse
-            self.n_accel["traverse"] = len(rp_traverse)
-        else:
-            (step_timings, c_total) = self.configure_ramp(traverse_rate, ramp_type)
-            self.t_accel["traverse"] = step_timings
-            self.add_profile_to_db(ramp_type, traverse_rate, accel, 0, step_timings, c_total)
-            self.n_accel["traverse"] = len(step_timings)
-        rp_feed = self.get_profile_from_db(ramp_type, feed_rate, accel, 0)
-        if rp_feed:
-            self.logger.debug("Ramp profile loaded from DB.")
-            self.t_accel["feed"] = rp_feed
-            self.n_accel["feed"] = len(rp_feed)
-        else:
-            (step_timings, c_total) = self.configure_ramp(feed_rate, ramp_type)
-            self.t_accel["feed"] = step_timings
-            
-            self.add_profile_to_db(ramp_type, feed_rate, accel, 0, step_timings, c_total)
-            self.n_accel["feed"] = len(step_timings)
 
-    def get_profile_from_db(self, rtype, v_max, a_max, j_max):
-        doc_id = "{}{}V{}A{}J".format(rtype[0].upper(), int(v_max), int(a_max), int(j_max))
-        try:
-            document = self.db.find_document("ramp_profiles", doc_id)
-            if document:
-                return document["step_timings"]
-            else:
-                return None
-        except:
-            return None
+        (step_timings, c_total) = self.configure_ramp(traverse_rate, ramp_type)
+        self.t_accel["traverse"] = step_timings
+        self.n_accel["traverse"] = len(step_timings)
 
-    def add_profile_to_db(self, rtype, v_max, a_max, j_max, steps, t_accel):
-        doc_id = "{}{}V{}A{}J".format(rtype[0].upper(), int(v_max), int(a_max), int(j_max))
-        document = {"_id": doc_id,
-                    "type": rtype,
-                    "v_max": v_max,
-                    "a_max": a_max,
-                    "j_max": j_max,
-                    "T_accel": t_accel,
-                    "TPR": self.travel_per_rev,
-                    "step_angle": self.step_angle,
-                    "step_timings": steps}
-        try:
-            self.db.insert_document("ramp_profiles", document)
-        except:
-            self.logger.warning("Cannot store profile in DB, as DB not available")
+        (step_timings, c_total) = self.configure_ramp(feed_rate, ramp_type)
+        self.t_accel["feed"] = step_timings    
+        self.n_accel["feed"] = len(step_timings)
 
     def get_motion_type(self):
         """Get motion type of stepper motor"""
@@ -344,7 +303,6 @@ def main():
         a,
         v,
         f,
-        None,
         debug
     )
     mp.plan_interpolated_circle(20)

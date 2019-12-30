@@ -1,23 +1,23 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import json
 import logging
 import logging.config
+
 from argparse import ArgumentParser
 from multiprocessing import Process
 
-from gpio_handler import GPIOHandler
 from stepper import Stepper
 from motion_planner import MotionPlanner
 from gcode_parser import GCodeParser
-from db_conn import DBConnection
+
+import RPi.GPIO as GPIO
 
 def move(motor, motion_planner, dist, debug):
     step_intervals = motion_planner.plan_line(dist)
-    for step_interval in step_intervals:
-        if not debug:
+
+    if not debug:
+        for step_interval in step_intervals:
             motor.step(step_interval)
 
 class Router(object):
@@ -30,19 +30,15 @@ class Router(object):
         self.logger.info("Parsing Config File [{}]".format(cfg_file))
         with open(cfg_file) as main_cfg:
             self.cfg = json.load(main_cfg)
-
-        db_host = self.cfg["general"]["db_host"]
-        db_port = self.cfg["general"]["db_port"]
-        db_name = self.cfg["general"]["db_name"]
-        
-        self.db = DBConnection(db_host, db_port, db_name)
         
         self.coord_file = "coord.json"
         self.coordinates = self.load_coordinates(self.coord_file)
         self.debug = debug
 
         self.axes = ["X", "Y", "Z"]
-        self.handler = GPIOHandler(GPIO.BOARD, False, debug)
+        if not self.debug:
+            GPIO.setmode(GPIO.BOARD)
+            GPIO.setwarnings(False)
         self.configure_motors()
 
     def configure_motors(self):
@@ -54,26 +50,27 @@ class Router(object):
 
         for axis in self.axes:
             axis_cfg = self.cfg["axes"][axis]
-            self.gpios[axis] = axis_cfg['gpio']
+            self.gpios[axis] = axis_cfg["gpio"]
 
-            self.handler.set_output_pins(self.gpios[axis].values())
-            self.handler.default_output_pins(self.gpios[axis].values())
+            if not self.debug:
+                GPIO.setup(self.gpios[axis].values(), GPIO.OUT)
+                GPIO.output(self.gpios[axis].values(), False)
 
-#            self.pos[axis] = axis_cfg['position']
-            self.pol[axis] = axis_cfg['polarity']
+            self.pol[axis] = axis_cfg["polarity"]
+            driver = axis_cfg["driver"]
+            ramp_type = axis_cfg["ramp_type"]
+            step_angle = axis_cfg["step_angle"]
+            travel_per_rev = axis_cfg["travel_per_rev"]
+            microsteps = axis_cfg["microsteps"]
+            accel_rate = axis_cfg["acceleration_rate"]
+            v_max = axis_cfg["max_velocity"]
+            feed_rate = axis_cfg["max_feed_rate"]
 
-            ramp_type = axis_cfg['ramp_type']
-            step_angle = axis_cfg['step_angle']
-            travel_per_rev = axis_cfg['travel_per_rev']
-            microsteps = axis_cfg['microsteps']
-            accel_rate = axis_cfg['acceleration_rate']
-            v_max = axis_cfg['max_velocity']
-            feed_rate = axis_cfg['max_feed_rate']
-
-            self.lim[axis] = axis_cfg['limits']
+            self.lim[axis] = axis_cfg["limits"]
             
             s = Stepper(
                 "Stepper {} axis".format(axis),
+                driver,
                 microsteps,
                 "CW",
                 self.gpios[axis],
@@ -89,7 +86,6 @@ class Router(object):
                 accel_rate,
                 v_max,
                 feed_rate,
-                self.db,
                 self.debug
             )
             self.motors[axis] = s
@@ -161,15 +157,16 @@ class Router(object):
                 self.coordinates[axis] += delta[axis]
 
         for axis in self.axes:
-            self.handler.default_output_pins(self.gpios[axis].values())
-        self.handler.cleanup()
-        
+            if not self.debug:
+                GPIO.output(self.gpios[axis].values(), False)
+        if not self.debug:
+            GPIO.cleanup()
 
 
 def main():
-    parser = ArgumentParser(description='Process materials')
-    parser.add_argument('-i', '--gcode', dest='gcode', help='input g-code file', required=True)
-    parser.add_argument('-d', '--debug', dest='debug', action='store_true', help='Set debug mode')
+    parser = ArgumentParser(description="Process materials")
+    parser.add_argument("-i", "--gcode", dest="gcode", help="input g-code file", required=True)
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Set debug mode")
     args = parser.parse_args()
     # GPIOs: [DIR,STP,M0,M1,M2]
 #    cfg = Config("settings.cfg")
@@ -180,5 +177,5 @@ def main():
     router.save_coordinates()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

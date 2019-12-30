@@ -1,6 +1,7 @@
 {
     "axes": {
         "X": {
+	    "driver": "TB67S249FTG",
             "acceleration_rate": 80.0, 
             "gpio": {
                 "dir": 7, 
@@ -15,13 +16,14 @@
             ], 
             "max_feed_rate": 500.0, 
             "max_velocity": 1600.0, 
-            "microsteps": 1, 
+            "microsteps": 2, 
             "polarity": false, 
             "step_angle": 1.8, 
             "travel_per_rev": 5,
 	    "ramp_type": "sigmoidal"
         }, 
         "Y": {
+	    "driver": "TB67S249FTG",
             "acceleration_rate": 80.0, 
             "gpio": {
                 "dir": 13, 
@@ -36,13 +38,14 @@
             ], 
             "max_feed_rate": 400.0, 
             "max_velocity": 800.0, 
-            "microsteps": 1, 
+            "microsteps": 2, 
             "polarity": true, 
             "step_angle": 1.8, 
             "travel_per_rev": 5,
 	    "ramp_type": "sigmoidal"
         }, 
         "Z": {
+	    "driver": "TB67S249FTG",
             "acceleration_rate": 50.0, 
             "gpio": {
                 "dir": 21, 
