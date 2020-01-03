@@ -4,10 +4,35 @@
 \usepackage{listings}
 \usepackage{color}
 
+
+
+\renewcommand{\lstlistingname}{Algorithm}% Listing -> Algorithm
+
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegray},
+	keywordstyle=\color{red},
+	numberstyle=\tiny\color{lightgray},
+	stringstyle=\color{codepurple},
+	basicstyle=\footnotesize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	numbers=left,                    
+	numbersep=5pt,                  
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=4
+}
+
+\lstset{style=mystyle}
+
 \usepackage{amsmath}
 \usepackage{mathtools}
-%\usepackage{algorithm}
-%\usepackage{algpseudocode}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
 %\geometry{landscape}                		% Activate for rotated page geometry
 %\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
@@ -60,7 +85,8 @@ Rapid positioning mode does not care which axis movement completes first, it jus
 \end{figure}
 \pagebreak
 \section{G01 - Linear Interpolation}
-Linear interpolation is required to make coordinated movements across axis. Therefore we have to synchronize axis movement in order to have all involved axes reach destination at the same time point.
+Linear interpolation is required to make coordinated movements across axis. Therefore we have to synchronize axis movement in order to have all involved axes reach destination at the same time point. X and Y represent step counts of two independent axis movements. The zig-zag-pattern tries to approximate the ideal movement.
+\subsection{Function}
 \begin{figure}[h]
 	\begin{tikzpicture}
 	% draw coordinate system
@@ -97,6 +123,34 @@ Linear interpolation is required to make coordinated movements across axis. Ther
 	\caption{Linear interpolation in detail (G01).}
 	\label{fig:g01_detail}
 \end{figure}
+\subsection{Algorithm}
+\begin{algorithm}
+	\caption{Calculate interpolation}
+	\begin{algorithmic}[1]
+		\State $x_c \gets 0$
+		\State $y_c \gets 0$
+		\If{$x > $y}
+			\State $x_s \gets x / y$
+			\State $y_s \gets 1$
+			\State $i \gets 0$
+			\While{$i < y$}
+				\State $x_c \gets round(x_c + x_s)$
+				\State $y_c \gets y_c + y_s$
+				\State $i \gets i + 1$
+			\EndWhile
+		
+		\Else
+			\State $x_s \gets 1$
+			\State $y_s \gets y / x$
+			\State $i \gets 0$
+			\While{$i < x$}
+				\State $x_c \gets x_c + x_s$
+				\State $y_c \gets round(y_c + y_s)$
+				\State $i \gets i + 1$
+			\EndWhile
+		\EndIf
+	\end{algorithmic}
+\end{algorithm}
 \pagebreak
 \section{G02 - Circular Interpolation (clockwise)}
 Circular interpolation is required to draw round corners and cut circle with bigger radius out of the material. To do so, we have to use the midpoint circle algorithm and follow the path with steps. However this movement is much more complicated as we have also given axis cutoff values, which influence the starting angle of our movement.
