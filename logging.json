@@ -12,13 +12,13 @@
     "handlers": {
 	"console": {
 	    "class": "logging.StreamHandler",
-	    "level": "INFO",
+	    "level": "DEBUG",
 	    "formatter": "verbose",
 	    "stream": "ext://sys.stdout"
 	},
 	"file": {
 	    "class" : "logging.handlers.RotatingFileHandler",
-	    "level": "DEBUG",
+	    "level": "INFO",
 	    "formatter": "verbose",
 	    "filename": "router.log",
 	    "mode": "w",

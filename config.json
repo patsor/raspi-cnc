@@ -2,7 +2,6 @@
     "axes": {
         "X": {
 	    "driver": "TB67S249FTG",
-            "acceleration_rate": 80.0, 
             "gpio": {
                 "dir": 7, 
                 "m0": 8, 
@@ -13,18 +12,11 @@
             "limits": [
                 0.0, 
                 800.0
-            ], 
-            "max_feed_rate": 500.0, 
-            "max_velocity": 1600.0, 
-            "microsteps": 2, 
-            "polarity": false, 
-            "step_angle": 1.8, 
-            "travel_per_rev": 5,
-	    "ramp_type": "sigmoidal"
+            ],
+	    "polarity": true
         }, 
         "Y": {
 	    "driver": "TB67S249FTG",
-            "acceleration_rate": 80.0, 
             "gpio": {
                 "dir": 13, 
                 "m0": 16, 
@@ -36,17 +28,10 @@
                 51.0, 
                 400.0
             ], 
-            "max_feed_rate": 400.0, 
-            "max_velocity": 800.0, 
-            "microsteps": 2, 
-            "polarity": true, 
-            "step_angle": 1.8, 
-            "travel_per_rev": 5,
-	    "ramp_type": "sigmoidal"
+            "polarity": true
         }, 
         "Z": {
 	    "driver": "TB67S249FTG",
-            "acceleration_rate": 50.0, 
             "gpio": {
                 "dir": 21, 
                 "m0": 22, 
@@ -57,20 +42,18 @@
             "limits": [
                 0.0, 
                 -20.0
-            ], 
-            "max_feed_rate": 200.0, 
-            "max_velocity": 300.0, 
-            "microsteps": 2, 
-            "polarity": true, 
-            "step_angle": 1.8, 
-            "travel_per_rev": 5,
-	    "ramp_type": "sigmoidal"
+            ],  
+            "polarity": true
         }
     }, 
     "general": {
         "logfile": "main.log",
-	"db_host": "localhost",
-	"db_port": 27017,
-	"db_name": "raspi_cnc"
+	"max_feed_rate": 500.0, 
+        "max_velocity": 1600.0, 
+        "microsteps": 2, 
+        "step_angle": 1.8, 
+        "travel_per_rev": 5,
+	"ramp_type": "sigmoidal",
+	"acceleration_rate": 50.0
     }
 }

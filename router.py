@@ -20,6 +20,19 @@ def move(motor, motion_planner, dist, debug):
         for step_interval in step_intervals:
             motor.step(step_interval)
 
+def interpolate(motors, motion_planner, dist, debug):
+    # dist is a list of deltas
+    step_intervals = motion_planner.plan_interpolated_line(dist)
+
+    if not debug:
+        for axis, step_interval in step_intervals:
+            if axis == "X":
+                motors["X"].step(step_interval)
+            elif axis == "Y":
+                motors["Y"].step(step_interval)
+            elif axis == "Z":
+                motors["Z"].step(step_interval)
+
 class Router(object):
     def __init__(self, cfg_file, debug=False):
         self.cfg_file = cfg_file
@@ -45,9 +58,29 @@ class Router(object):
         self.gpios = {}
         self.pol = {}
         self.lim = {}
-        self.motion_planner = {}
         self.motors = {}
 
+        glob_cfg = self.cfg["general"]
+        
+        ramp_type = glob_cfg["ramp_type"]
+        step_angle = glob_cfg["step_angle"]
+        travel_per_rev = glob_cfg["travel_per_rev"]
+        microsteps = glob_cfg["microsteps"]
+        accel_rate = glob_cfg["acceleration_rate"]
+        v_max = glob_cfg["max_velocity"]
+        feed_rate = glob_cfg["max_feed_rate"]
+        self.mp = MotionPlanner(
+            "traverse",
+            ramp_type,
+            step_angle,
+            travel_per_rev,
+            microsteps,
+            accel_rate,
+            v_max,
+            feed_rate,
+            self.debug
+        )
+        
         for axis in self.axes:
             axis_cfg = self.cfg["axes"][axis]
             self.gpios[axis] = axis_cfg["gpio"]
@@ -58,13 +91,6 @@ class Router(object):
 
             self.pol[axis] = axis_cfg["polarity"]
             driver = axis_cfg["driver"]
-            ramp_type = axis_cfg["ramp_type"]
-            step_angle = axis_cfg["step_angle"]
-            travel_per_rev = axis_cfg["travel_per_rev"]
-            microsteps = axis_cfg["microsteps"]
-            accel_rate = axis_cfg["acceleration_rate"]
-            v_max = axis_cfg["max_velocity"]
-            feed_rate = axis_cfg["max_feed_rate"]
 
             self.lim[axis] = axis_cfg["limits"]
             
@@ -76,20 +102,8 @@ class Router(object):
                 self.gpios[axis],
                 self.debug
             )
-            mp = MotionPlanner(
-                "{} axis".format(axis),
-                "traverse",
-                ramp_type,
-                step_angle,
-                travel_per_rev,
-                microsteps,
-                accel_rate,
-                v_max,
-                feed_rate,
-                self.debug
-            )
+
             self.motors[axis] = s
-            self.motion_planner[axis] = mp
 
     def load_coordinates(self, coord_file):
         with open(coord_file) as coord:
@@ -113,14 +127,15 @@ class Router(object):
             for (prefix, val) in command:
                 if prefix == "G":
                     if val == "00":
-                        for axis in self.axes:
-                            self.motion_planner[axis].set_motion_type("traverse")
+                        self.logger.debug("Switching to Traverse Mode")
+                        self.mp.set_motion_type("traverse")
                     elif val == "01":
-                        for axis in self.axes:
-                            self.motion_planner[axis].set_motion_type("feed")
+                        self.logger.debug("Switching to Feed Mode")
+                        self.mp.set_motion_type("feed")
                     elif val == "28":
+                        self.logger.debug("Switching to Traverse Mode")
+                        self.mp.set_motion_type("traverse")
                         for axis in self.axes:
-                            self.motion_planner[axis].set_motion_type("traverse")
                             delta[axis] = - self.coordinates[axis]
                 elif prefix == "X":
                     delta[prefix] = float(val) - self.coordinates[prefix]
@@ -128,9 +143,7 @@ class Router(object):
                     delta[prefix] = float(val) - self.coordinates[prefix]
                 elif prefix == "Z":
                     delta[prefix] = float(val) - self.coordinates[prefix]
-            self.logger.debug("Calculating motion vector")
-            # Starting axis movement as parallel processes
-            procs = []
+
             for axis in self.axes:
                 if delta[axis] < 0:
                     if self.pol[axis]:
@@ -144,18 +157,31 @@ class Router(object):
                         self.motors[axis].set_direction("CW")
                 else:
                     continue
-                proc = Process(target=move, args=(self.motors[axis], self.motion_planner[axis], delta[axis], self.debug))
+            motion_type = self.mp.get_motion_type()
+            if motion_type == "traverse":
+                self.logger.debug("Calculating motion vector - asynchronous")
+                # Starting axis movement as parallel processes
+                procs = []
+                proc = Process(target=move, args=(self.motors[axis], self.mp, delta[axis], self.debug))
                 procs.append(proc)
 
-            for proc in procs:
-                proc.start()
+                for proc in procs:
+                    proc.start()
 
-            for proc in procs:
-                proc.join()
+                for proc in procs:
+                    proc.join()
 
+            elif motion_type == "feed":
+                self.logger.debug("Calculating motion vector - interpolated")
+                interpolate(self.motors, self.mp, delta, self.debug)
+            else:
+                self.logger.debug("Unknown motion type. Abort!")
             for axis in self.axes:
                 self.coordinates[axis] += delta[axis]
 
+
+
+        # Cleanup after processing
         for axis in self.axes:
             if not self.debug:
                 GPIO.output(self.gpios[axis].values(), False)

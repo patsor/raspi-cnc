@@ -9,15 +9,14 @@ from argparse import ArgumentParser
 
 
 class MotionPlanner(object):
-    def __init__(self, name, motion_type, ramp_type, step_angle, travel_per_rev, mode, accel, traverse_rate, feed_rate, debug=False):
-        self.name = name
+    def __init__(self, motion_type, ramp_type, step_angle, travel_per_rev, mode, accel, traverse_rate, feed_rate, debug=False):
         self.motion_type = motion_type
         self.ramp_type = ramp_type
         self.step_angle = step_angle
         self.travel_per_rev = travel_per_rev
         self.mode = mode
         self.accel = accel
-        self.logger = logging.getLogger(self.name)
+        self.logger = logging.getLogger("MotionPlanner")
         self.debug = debug
 
         self.t_accel = {}
@@ -40,7 +39,7 @@ class MotionPlanner(object):
         self.motion_type = motion_type
 
     def calc_steps(self, dist):
-        self.logger.debug("{} - Caluclating number of steps".format(self.name))
+        self.logger.debug("Caluclating number of steps")
         n = int(round(abs(dist) * 360.0 / self.step_angle / self.travel_per_rev * self.mode))
         self.logger.debug("{} steps required to reach destination".format(n))
         return n
@@ -48,7 +47,7 @@ class MotionPlanner(object):
     def plan_line(self, dist):
         step_intervals = []
         n = self.calc_steps(dist)
-#        self.logger.debug("{} - Moving {}mm".format(self.name, dist))
+#        self.logger.debug("Moving {}mm".format(dist))
         steps_left = n
         step_interval = 0.0002
         
@@ -66,22 +65,41 @@ class MotionPlanner(object):
             step_intervals.append(delay)
         return step_intervals
     
-    def plan_interpolated_line(self, x, y):
-        nx = self.calc_steps(x)
-        ny = self.calc_steps(y)
-        if x > y:
-            for i in range(nx):
-                # step x
-                if i % nx/ny:
-                    # step y
-                    pass
-                    
-        else:
-            for i in range(ny):
-                # step y
-                if i % ny/nx:
-                    # step x
-                    pass
+    def plan_interpolated_line(self, dist):
+        nx = self.calc_steps(dist["X"])
+        ny = self.calc_steps(dist["Y"])
+        nz = self.calc_steps(dist["Z"])
+        n = []
+        for ele in [nx, ny, nz]:
+            if ele > 0:
+                n.append(ele)
+        step_intervals = []
+        step_interval = 0.1
+        delay = step_interval * 0.5
+        xp = 0
+        yp = 0
+        zp = 0
+        min_dist = min(n)
+        ratio_x = float(nx) / min_dist
+        ratio_y = float(ny) / min_dist
+        ratio_z = float(nz) / min_dist
+        for i in range(min_dist):
+            steps_x = int(round(xp + ratio_x) - round(xp))
+            steps_y = int(round(yp + ratio_y) - round(yp))
+            steps_z = int(round(zp + ratio_z) - round(zp))
+
+            xp += ratio_x
+            yp += ratio_y
+            zp += ratio_z
+
+            for j in range(steps_x):
+                step_intervals.append(("X", delay))
+            for k in range(steps_y):
+                step_intervals.append(("Y", delay))
+            for m in range(steps_z):
+                step_intervals.append(("Z", delay))
+
+        return step_intervals
             
     
     def plan_interpolated_circle(self, x0, y0, r):
@@ -134,7 +152,7 @@ class MotionPlanner(object):
             return (self._configure_ramp_polynomial(vm))
 
     def _configure_ramp_trapezoidal(self, vm):
-        self.logger.info("{} - Generating trapezoidal ramp profile [v_max={}]".format(self.name, vm))
+        self.logger.info("Generating trapezoidal ramp profile [v_max={}]".format(vm))
 #        outf = open("ramp_profile_t" + str(int(vm)) + ".csv", "w")
         sqrt = math.sqrt
         # steps per revolution: microstepping mode as factor
@@ -173,7 +191,7 @@ class MotionPlanner(object):
         return (c, c_total)
 
     def _configure_ramp_sigmoidal(self, vm):
-        self.logger.info("{} - Generating sigmoidal ramp profile [v_max={}]".format(self.name, vm))
+        self.logger.info("Generating sigmoidal ramp profile [v_max={}]".format(vm))
 #        outf = open("ramp_profile_s" + str(int(vm)) + ".csv", "w")
         # steps per revolution: microstepping mode as factor
         spr = 360.0 / self.step_angle * self.mode
@@ -305,8 +323,11 @@ def main():
         f,
         debug
     )
-    mp.plan_interpolated_circle(20)
-#    mp.configure_ramp("scurve", v)
+    #    mp.plan_interpolated_circle(20)
+    dist = {"X": 10, "Y": 5, "Z": 2}
+    intervals = mp.plan_interpolated_line(dist)
+    print(intervals)
+    #    mp.configure_ramp("scurve", v)
 
 
 if __name__ == '__main__':
