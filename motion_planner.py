@@ -15,33 +15,14 @@ def _calc_steps(dist, step_angle, mode, lead):
 
 
 def _plan_move(steps_x, steps_y, steps_z):
-    step_intervals_x = []
-    step_intervals_y = []
-    step_intervals_z = []
 
     factor_x = 1 if steps_x >= 0 else -1
     factor_y = 1 if steps_y >= 0 else -1
     factor_z = 1 if steps_z >= 0 else -1
 
-    x = abs(steps_x)
-    y = abs(steps_y)
-    z = abs(steps_z)
-
-    max_steps = max(x, y, z)
-
-    for i in range(max_steps):
-        if i < x:
-            step_intervals_x.append(factor_x)
-        else:
-            step_intervals_x.append(0)
-        if i < y:
-            step_intervals_y.append(factor_y)
-        else:
-            step_intervals_y.append(0)
-        if i < z:
-            step_intervals_z.append(factor_z)
-        else:
-            step_intervals_z.append(0)
+    step_intervals_x = [factor_x] * abs(steps_x)
+    step_intervals_y = [factor_y] * abs(steps_y)
+    step_intervals_z = [factor_z] * abs(steps_z)
 
     return step_intervals_x, step_intervals_y, step_intervals_z
 

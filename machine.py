@@ -99,5 +99,4 @@ class Machine(object):
         self.coordinates["X"] += delta_x
         self.coordinates["Y"] += delta_y
         self.coordinates["Z"] += delta_z
-        print(self.coordinates)
         self.save_coordinates()

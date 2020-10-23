@@ -313,7 +313,7 @@ class Stepper(object):
     def step(self, interval):
         gpio_step = self.gpios["step"]
         masked_interval = _add_ramp(interval, self.ramp, self.step_delay)
-        # delay = 1.0 / (self.step_freq * 2)
+
         for i, delay in masked_interval:
             if i == -1:
                 self.set_direction("CCW")

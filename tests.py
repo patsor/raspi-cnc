@@ -193,13 +193,13 @@ class TestMotionPlanner(unittest.TestCase):
 
     def test_move(self):
         x = [1, 1, 1, 1, 1, 1, 1, 1]
-        y = [1, 1, 1, 1, 0, 0, 0, 0]
-        z = [1, 1, 1, 0, 0, 0, 0, 0]
+        y = [1, 1, 1, 1]
+        z = [1, 1, 1]
         self.assertEqual(_plan_move(8, 4, 3), (x, y, z))
 
         x = [-1, -1, -1, -1, -1, -1, -1, -1]
-        y = [1, 1, 1, 1, 0, 0, 0, 0]
-        z = [-1, -1, -1, 0, 0, 0, 0, 0]
+        y = [1, 1, 1, 1]
+        z = [-1, -1, -1]
         self.assertEqual(_plan_move(-8, 4, -3), (x, y, z))
 
     def test_interpolated_line(self):
