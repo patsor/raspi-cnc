@@ -1,34 +1,151 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import time
 import math
 import logging
 from argparse import ArgumentParser
 
+import config as cfg
+
+
+def _transform_intervals(interval_list, factor=1):
+    return [0 if ele == 1 or ele == -1 else 1 * factor for ele in interval_list]
+
+
+def _calc_steps(dist, step_angle, mode, travel_per_rev):
+    return int(round(abs(dist) * 360.0 / step_angle / travel_per_rev * mode))
+
+
+def _plan_move(steps_x, steps_y, steps_z):
+    step_intervals_x = []
+    step_intervals_y = []
+    step_intervals_z = []
+
+    factor_x = 1 if steps_x >= 0 else -1
+    factor_y = 1 if steps_y >= 0 else -1
+    factor_z = 1 if steps_z >= 0 else -1
+
+    x = abs(steps_x)
+    y = abs(steps_y)
+    z = abs(steps_z)
+
+    max_steps = max(x, y, z)
+
+    for i in range(max_steps):
+        if i < x:
+            step_intervals_x.append(factor_x)
+        else:
+            step_intervals_x.append(0)
+        if i < y:
+            step_intervals_y.append(factor_y)
+        else:
+            step_intervals_y.append(0)
+        if i < z:
+            step_intervals_z.append(factor_z)
+        else:
+            step_intervals_z.append(0)
+
+    return step_intervals_x, step_intervals_y, step_intervals_z
+
+
+def _plan_interpolated_line(steps_x, steps_y):
+
+    step_intervals_x = []
+    step_intervals_y = []
+
+    factor_x = 1 if steps_x >= 0 else -1
+    factor_y = 1 if steps_y >= 0 else -1
+
+    x = abs(steps_x)
+    y = abs(steps_y)
+
+    slope = float(y) / x
+
+    px = 0
+    py = 0
+
+    while px != x or py != y:
+        # if (f(x+1) - y) >= 1, y + 1
+        # else x + 1
+        if (slope * (px + 1) - py >= 1):
+            py += 1
+            step_intervals_x.append(0)
+            step_intervals_y.append(factor_y)
+        else:
+            px += 1
+            step_intervals_x.append(factor_x)
+            step_intervals_y.append(0)
+
+    return step_intervals_x, step_intervals_y
+
+
+def _plan_interpolated_circle(r):
+    step_intervals_x = []
+    step_intervals_y = []
+    q2_intervals_x = []
+    q2_intervals_y = []
+    px = 0
+    py = 0
+
+    while px != r or py != r:
+
+        px_inc = px + 1
+        py_inc = py + 1
+        # Calculate quadratic error on x axis for next step in x direction
+        # Formula: e = r^2 - ((r - xn+1)^2 + yn^2)
+        ex = abs(px_inc * (2 * r - px_inc) - py * py)
+        # Calculate quadratic error on y axis for next step in y direction
+        # Formula: e = r^2 - ((r - xn)^2 + yn+1^2)
+        ey = abs(px * (2 * r - px) - py_inc * py_inc)
+
+        # Compare errors and choose path with least quadratic error
+        if ex < ey:
+            px += 1
+            q2_intervals_x.append(1)
+            q2_intervals_y.append(0)
+        else:
+            py += 1
+            q2_intervals_x.append(0)
+            q2_intervals_y.append(1)
+
+    q1_intervals_x = _transform_intervals(q2_intervals_x)
+    q4_intervals_x = _transform_intervals(q1_intervals_x, -1)
+    q3_intervals_x = _transform_intervals(q2_intervals_x, -1)
+
+    q1_intervals_y = _transform_intervals(q2_intervals_y, -1)
+    q4_intervals_y = _transform_intervals(q1_intervals_y, -1)
+    q3_intervals_y = _transform_intervals(q2_intervals_y)
+
+    step_intervals_x.extend(q2_intervals_x)
+    step_intervals_x.extend(q1_intervals_x)
+    step_intervals_x.extend(q4_intervals_x)
+    step_intervals_x.extend(q3_intervals_x)
+
+    step_intervals_y.extend(q2_intervals_y)
+    step_intervals_y.extend(q1_intervals_y)
+    step_intervals_y.extend(q4_intervals_y)
+    step_intervals_y.extend(q3_intervals_y)
+
+    return step_intervals_x, step_intervals_y
+
 
 class MotionPlanner(object):
-    def __init__(self, motion_type, ramp_type, step_angle, travel_per_rev, mode, accel, traverse_rate, feed_rate, debug=False):
-        self.motion_type = motion_type
-        self.ramp_type = ramp_type
-        self.step_angle = step_angle
-        self.travel_per_rev = travel_per_rev
-        self.mode = mode
-        self.accel = accel
+    def __init__(self, debug=False):
         self.logger = logging.getLogger("MotionPlanner")
         self.debug = debug
 
-        self.t_accel = {}
-        self.n_accel = {}
+        #self.t_accel = {}
+        #self.n_accel = {}
 
-        (step_timings, c_total) = self.configure_ramp(traverse_rate, ramp_type)
-        self.t_accel["traverse"] = step_timings
-        self.n_accel["traverse"] = len(step_timings)
+        # (step_timings, c_total) = self.configure_ramp(
+        #    cfg.max_traverse_rate, cfg.ramp_type)
+        #self.t_accel["traverse"] = step_timings
+        #self.n_accel["traverse"] = len(step_timings)
 
-        (step_timings, c_total) = self.configure_ramp(feed_rate, ramp_type)
-        self.t_accel["feed"] = step_timings    
-        self.n_accel["feed"] = len(step_timings)
+        # (step_timings, c_total) = self.configure_ramp(
+        #    cfg.max_feed_rate, step_angle, mode, travel_per_rev, acceleration_rate, cfg.ramp_type)
+        #self.t_accel["feed"] = step_timings
+        #self.n_accel["feed"] = len(step_timings)
 
     def get_motion_type(self):
         """Get motion type of stepper motor"""
@@ -38,127 +155,38 @@ class MotionPlanner(object):
         """Set motion type of stepper motor"""
         self.motion_type = motion_type
 
-    def calc_steps(self, dist):
-        self.logger.debug("Caluclating number of steps")
-        n = int(round(abs(dist) * 360.0 / self.step_angle / self.travel_per_rev * self.mode))
-        self.logger.debug("{} steps required to reach destination".format(n))
-        return n
-        
-    def plan_line(self, dist):
-        step_intervals = []
-        n = self.calc_steps(dist)
-#        self.logger.debug("Moving {}mm".format(dist))
-        steps_left = n
-        step_interval = 0.0002
-        
-        for i in range(n):
-            steps_left -= 1
-            
-            if i < self.n_accel[self.motion_type]:
-                step_interval = self.t_accel[self.motion_type][i]
-            if steps_left < self.n_accel[self.motion_type]:
-                step_interval = self.t_accel[self.motion_type][steps_left]
-            delay = step_interval * 0.5
+    def plan_move(self, x, y, z, sx, sy, sz):
+        steps_x = _calc_steps(x, sx.step_angle, sx.mode, sx.travel_per_rev)
+        steps_y = _calc_steps(y, sy.step_angle, sy.mode, sy.travel_per_rev)
+        steps_z = _calc_steps(z, sz.step_angle, sz.mode, sz.travel_per_rev)
+        return _plan_move(steps_x, steps_y, steps_z)
 
-#            if not self.debug:
-#                self.step(delay)
-            step_intervals.append(delay)
-        return step_intervals
-    
-    def plan_interpolated_line(self, dist):
-        nx = self.calc_steps(dist["X"])
-        ny = self.calc_steps(dist["Y"])
-        nz = self.calc_steps(dist["Z"])
-        n = []
-        for ele in [nx, ny, nz]:
-            if ele > 0:
-                n.append(ele)
-        step_intervals = []
-        step_interval = 0.1
-        delay = step_interval * 0.5
-        xp = 0
-        yp = 0
-        zp = 0
-        min_dist = min(n)
-        ratio_x = float(nx) / min_dist
-        ratio_y = float(ny) / min_dist
-        ratio_z = float(nz) / min_dist
-        for i in range(min_dist):
-            steps_x = int(round(xp + ratio_x) - round(xp))
-            steps_y = int(round(yp + ratio_y) - round(yp))
-            steps_z = int(round(zp + ratio_z) - round(zp))
+    def plan_interpolated_line(self, x, y, sx, sy):
+        steps_x = _calc_steps(x, sx.step_angle, sx.mode, sx.travel_per_rev)
+        steps_y = _calc_steps(y, sy.step_angle, sy.mode, sy.travel_per_rev)
+        return _plan_interpolated_line(steps_x, steps_y)
 
-            xp += ratio_x
-            yp += ratio_y
-            zp += ratio_z
+    def plan_interpolated_circle(self, r, sx, sy):
+        steps_r = _calc_steps(r, sx.step_angle, sx.mode, sx.travel_per_rev)
+        return _plan_interpolated_circle(steps_r)
 
-            for j in range(steps_x):
-                step_intervals.append(("X", delay))
-            for k in range(steps_y):
-                step_intervals.append(("Y", delay))
-            for m in range(steps_z):
-                step_intervals.append(("Z", delay))
-
-        return step_intervals
-            
-    
-    def plan_interpolated_circle(self, x0, y0, r):
-        #n = self.calc_steps(r)
-        x = 0
-        y = -r
-        d = 1.25 - r
-        points = []
-        init_points = [(x, y)]
-        dx = []
-        dy = []
-        # 3rd quadrant
-        while x > y:
-            if d < 0:
-                x -= 1
-                d += -2*x + 1
-                
-            else:
-                x -= 1
-                y += 1
-                d += -2*(x-y) + 1
-            point = (x, y)
-            init_points.append(point)
-        octant_len = len(init_points)
-        for i in range(octant_len-2, -1, -1):
-            point = (init_points[i][1], init_points[i][0])
-            init_points.append(point)
-        points.extend(init_points)
-        # 2nd quadrant
-        for p in init_points[1:]:
-            points.append((p[1], -p[0]))
-        # 1st quadrant
-        for p in init_points[1:]:
-            points.append((-p[0], -p[1]))
-        # 4th quadrant
-        for p in init_points[1:]:
-            points.append((-p[1], p[0]))
-            
-        for i in range(1, len(points)):
-            dx = points[i][0] - points[i-1][0]
-            dy = points[i][1] - points[i-1][1]
-            print(dx, dy)
-            
-    def configure_ramp(self, vm, method="trapezoidal"):
+    def configure_ramp(self, vm, step_angle, mode, travel_per_rev, acceleration_rate, method="trapezoidal"):
         if method == "trapezoidal":
-            return (self._configure_ramp_trapezoidal(vm))
+            return (self._configure_ramp_trapezoidal(vm, step_angle, mode, travel_per_rev, acceleration_rate))
         elif method == "sigmoidal":
-            return (self._configure_ramp_sigmoidal(vm))
+            return (self._configure_ramp_sigmoidal(vm, step_angle, mode, travel_per_rev, acceleration_rate))
         elif method == "polynomial":
-            return (self._configure_ramp_polynomial(vm))
+            return (self._configure_ramp_polynomial(vm, step_angle, mode, travel_per_rev, acceleration_rate))
 
-    def _configure_ramp_trapezoidal(self, vm):
-        self.logger.info("Generating trapezoidal ramp profile [v_max={}]".format(vm))
+    def _configure_ramp_trapezoidal(self, vm, step_angle, mode, travel_per_rev, acceleration_rate):
+        self.logger.info(
+            "Generating trapezoidal ramp profile [v_max={}]".format(vm))
 #        outf = open("ramp_profile_t" + str(int(vm)) + ".csv", "w")
         sqrt = math.sqrt
         # steps per revolution: microstepping mode as factor
-        spr = 360.0 / self.step_angle * self.mode
+        spr = 360.0 / step_angle * mode
         # Number of steps it takes to move axis 1mm
-        steps_per_mm = spr / self.travel_per_rev
+        steps_per_mm = spr / travel_per_rev
         # linear movement along the axes per step
         # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
         # [rotation_angle = 2 * PI / SPR]
@@ -166,7 +194,7 @@ class MotionPlanner(object):
         # Convert target velocity from mm/min to rad/s
         w = vm / 60 * steps_per_mm * angle
         # Convert acceleration from mm/s^2 to rad/s^2
-        a = self.accel * steps_per_mm * angle
+        a = acceleration_rate * steps_per_mm * angle
         # Calculation of number of steps needed to accelerate/decelerate
         # vf = final velocity (rad/s)
         # a = acceleration (rad/s^2)
@@ -190,13 +218,14 @@ class MotionPlanner(object):
 #        outf.close()
         return (c, c_total)
 
-    def _configure_ramp_sigmoidal(self, vm):
-        self.logger.info("Generating sigmoidal ramp profile [v_max={}]".format(vm))
+    def _configure_ramp_sigmoidal(self, vm, step_angle, mode, travel_per_rev, acceleration_rate):
+        self.logger.info(
+            "Generating sigmoidal ramp profile [v_max={}]".format(vm))
 #        outf = open("ramp_profile_s" + str(int(vm)) + ".csv", "w")
         # steps per revolution: microstepping mode as factor
-        spr = 360.0 / self.step_angle * self.mode
+        spr = 360.0 / step_angle * mode
         # Number of steps it takes to move axis 1mm
-        steps_per_mm = spr / self.travel_per_rev
+        steps_per_mm = spr / travel_per_rev
         # linear movement along the axes per step
         # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
         # [rotation_angle = 2 * PI / SPR]
@@ -204,7 +233,7 @@ class MotionPlanner(object):
         # Convert target velocity from mm/min to rad/s
         w = vm / 60 * steps_per_mm * angle
         # Convert acceleration from mm/s^2 to rad/s^2
-        a = self.accel * steps_per_mm * angle
+        a = acceleration_rate * steps_per_mm * angle
         ti = 0.4
         # pre-calculated values
         w_4_a = w / (4*a)
@@ -212,12 +241,15 @@ class MotionPlanner(object):
         e_ti = math.e**(a_4_w*ti)
         e_n = math.e**(a_4_w*angle/w)
         t_mod = ti - w_4_a * math.log(0.005)
-        
-        num_steps = int(round(w**2 * (math.log(math.e**(a_4_w*t_mod) + e_ti) - math.log(e_ti + 1)) / (4*a*angle)))
+
+        num_steps = int(round(
+            w**2 * (math.log(math.e**(a_4_w*t_mod) + e_ti) - math.log(e_ti + 1)) / (4*a*angle)))
 #        t = 0.0
         c = []
         for i in range(1, num_steps):
-            cn = w_4_a * math.log(((e_ti + 1) * e_n**(i+1) - e_ti)/((e_ti + 1) * e_n**i - e_ti))
+            cn = w_4_a * \
+                math.log(((e_ti + 1) * e_n**(i+1) - e_ti) /
+                         ((e_ti + 1) * e_n**i - e_ti))
 #            t += cn
 #            outf.write("{};{}\n".format(t, 1.0/cn/steps_per_mm*60))
             c.append(cn)
@@ -227,12 +259,12 @@ class MotionPlanner(object):
 #        outf.close()
         return (c, c_total)
 
-    def _configure_ramp_polynomial(self, vm):
+    def _configure_ramp_polynomial(self, vm, step_angle, mode, travel_per_rev, acceleration_rate):
         sqrt = math.sqrt
         # steps per revolution: microstepping mode as factor
-        spr = 360.0 / self.step_angle * self.mode
+        spr = 360.0 / step_angle * mode
         # Number of steps it takes to move axis 1mm
-        steps_per_mm = spr / self.travel_per_rev
+        steps_per_mm = spr / travel_per_rev
         # linear movement along the axes per step
         # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
         # [rotation_angle = 2 * PI / SPR]
@@ -240,7 +272,7 @@ class MotionPlanner(object):
         # Convert target velocity from mm/min to rad/s
         v3 = vm / 60 * steps_per_mm * step_angle_in_rad
         # Convert acceleration from mm/s^2 to rad/s^2
-        accel_in_rad = self.accel * steps_per_mm * step_angle_in_rad
+        accel_in_rad = acceleration_rate * steps_per_mm * step_angle_in_rad
         # Calculation of number of steps needed to accelerate/decelerate
         # Concave segment
 
@@ -300,34 +332,11 @@ class MotionPlanner(object):
                 c.append(cn)
             print(i, period, an, 1/cn, 1/cn*step_angle_in_rad)
         return c
-        
+
+
 def main():
-    step_angle = 1.8
-    travel_per_rev = 5.0
-    mode = 1
-    motion_type = "traverse"
-    a = 100.0
-    v = 1200.0
-    f = 400.0
-    debug=False
-        
-    mp = MotionPlanner(
-        "X axis",
-        "traverse",
-        "sigmoidal",
-        step_angle,
-        travel_per_rev,
-        mode,
-        a,
-        v,
-        f,
-        debug
-    )
-    #    mp.plan_interpolated_circle(20)
-    dist = {"X": 10, "Y": 5, "Z": 2}
-    intervals = mp.plan_interpolated_line(dist)
-    print(intervals)
-    #    mp.configure_ramp("scurve", v)
+    mp = MotionPlanner()
+    mp._plan_interpolated_circle(5)
 
 
 if __name__ == '__main__':

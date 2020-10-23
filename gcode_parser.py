@@ -1,66 +1,90 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+import config as cfg
+from gcode import GCode
 
-import logging
+from gcode_exceptions import DuplicateGCodeError, GCodeNotFoundError, InvalidGCodeError, MissingGCodeError, UnsupportedGCodeError, GCodeOutOfBoundsError
 
-__version__ = "0.1"
+supported_gcodes = ("00", "01", "02", "28")
+
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
 
 class GCodeParser(object):
-    def __init__(self, infile, axis_limits):
-        self.infile = infile
-        self.logger = logging.getLogger("GCodeParser")
-        self.limits = axis_limits
-        self.valid_g_codes = {
-            "00": "Rapid positioning",
-            "01": "Linear interpolation",
-            "28": "Return to home position"
-        }
-        self.instructions = self.read_gfile()
-        
-    def read_gfile(self):
-        commands = []
-        self.logger.info("Checking validity of g-code file.")
-        with open(self.infile) as inf:
-            for i, line in enumerate(inf):
-                if line.startswith("%"):
-                    continue
-                code_blocks = []
-                elements = line.rstrip().split(" ")
-                for ele in elements:
-                    prefix = ele[0]
-                    val = ele[1:]
-                    code_blocks.append((prefix, val))
-                response_code, msg = self.validate(code_blocks)
-                if response_code == 200:
-                    commands.append(code_blocks)
-                else:
-                    raise ValueError("Invalid Instruction in line {} of {}:\n ---> {}".format(i+1, self.infile, msg))
-        self.logger.info("Loaded {} instructions".format(len(commands)))
-        return commands
-                
-    def validate(self, code_blocks):
-        for (prefix, val) in code_blocks:
-            if prefix == "N":
-                val = int(val)
-                if val < 0:
-                    return (100, "N value below zero")
-            elif prefix == "G":
-                if val not in self.valid_g_codes:
-                    return (101, "Invalid operation")
-            elif prefix == "X":
-                val = float(val)
-                x_min, x_max = self.limits[prefix]
-                if val < x_min or val > x_max:
-                    return (102, "X value not in range ({}, {}): {}".format(x_min, x_max, val))
-            elif prefix == "Y":
-                val = float(val)
-                y_min, y_max = self.limits[prefix]
-                if val < y_min or val > y_max:
-                    return (103, "Y value not in range ({}, {}): {}".format(y_min, y_max, val))
-            elif prefix == "Z":
-                val = float(val)
-                z_min, z_max = self.limits[prefix]
-                if val > z_min or val < z_max:
-                    return (104, "Z value not in range ({}, {}): {}".format(z_min, z_max, val))
-        return (200, "Ok")
+
+    @staticmethod
+    def read_lines(gcode_file):
+        gcode_list = []
+        with open(gcode_file) as inf:
+            for line in inf:
+                params = GCodeParser.parse_line(line)
+                if params:
+                    gcode = GCode(params)
+                    gcode_list.append(gcode)
+        return gcode_list
+
+    @staticmethod
+    def parse_line(line):
+        line = line.strip()
+        params = {}
+        if not line:
+            return None
+        if line[0] == "%":
+            return None
+        elements = line.upper().split()
+        for ele in elements:
+            key = ele[0]
+            val = ele[1:]
+
+            # Check if there is already a parameter with name 'key'
+            if key in params:
+                raise DuplicateGCodeError(line, "Duplicate parameter")
+
+            # Check if parameter is in [A-Z]
+            if not key.isalpha():
+                raise InvalidGCodeError(line, "Invalid parameter")
+
+            # Check if parameter value is a number
+            if not is_number(val):
+                raise InvalidGCodeError(line, "Invalid parameter value")
+
+            # Check if X, Y, Z parameters fall in axis range
+            if key in ("X", "Y", "Z"):
+                limits = cfg.steppers[key]["limits"]
+                if float(val) < limits[0] or float(val) > limits[1]:
+                    raise GCodeOutOfBoundsError(
+                        line, "GCode out of bounds")
+
+            # Check if GCode is supported
+            if key == "G" and val not in supported_gcodes:
+                raise UnsupportedGCodeError(line, "Unsupported G-code")
+
+            # Add parameter to parameter list
+            params[key] = val
+
+        # Check if GCode contains either G or M
+        if not any(key in params for key in ("G", "M")):
+            raise MissingGCodeError(line, "No command found")
+
+        # Check that there is only one of G or M within GCode
+        if all(key in params for key in ("G", "M")):
+            raise DuplicateGCodeError(line, "G and M code found")
+
+        if "G" in params:
+            # Check if linear interpolation has valid command
+            if params["G"] == "01":
+                if len([key for key in ("X", "Y", "Z") if key in params]) != 2:
+                    raise InvalidGCodeError(line, "Either XY, XZ, YZ allowed")
+            # Check if circular interpolation has valid command
+            elif params["G"] == "02":
+                if not "R" in params:
+                    raise InvalidGCodeError(line, "Missing R parameter")
+                if any(key in params for key in ("X", "Y", "Z")):
+                    raise InvalidGCodeError(line, "Only R parameter allowed")
+        return params

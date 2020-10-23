@@ -1,206 +1,59 @@
 #!/usr/bin/env python
 
+from argparse import ArgumentParser
 import json
 import logging
 import logging.config
 
-from argparse import ArgumentParser
-from multiprocessing import Process
-
 from stepper import Stepper
-from motion_planner import MotionPlanner
+from machine import Machine
 from gcode_parser import GCodeParser
 
-import RPi.GPIO as GPIO
+import config as cfg
 
-def move(motor, motion_planner, dist, debug):
-    step_intervals = motion_planner.plan_line(dist)
-
-    if not debug:
-        for step_interval in step_intervals:
-            motor.step(step_interval)
-
-def interpolate(motors, motion_planner, dist, debug):
-    # dist is a list of deltas
-    step_intervals = motion_planner.plan_interpolated_line(dist)
-
-    if not debug:
-        for axis, step_interval in step_intervals:
-            if axis == "X":
-                motors["X"].step(step_interval)
-            elif axis == "Y":
-                motors["Y"].step(step_interval)
-            elif axis == "Z":
-                motors["Z"].step(step_interval)
 
 class Router(object):
-    def __init__(self, cfg_file, debug=False):
-        self.cfg_file = cfg_file
+    def __init__(self, debug=False):
         with open("logging.json") as log_cfg:
             log_dict = json.load(log_cfg)
         logging.config.dictConfig(log_dict)
         self.logger = logging.getLogger("main")
-        self.logger.info("Parsing Config File [{}]".format(cfg_file))
-        with open(cfg_file) as main_cfg:
-            self.cfg = json.load(main_cfg)
-        
-        self.coord_file = "coord.json"
-        self.coordinates = self.load_coordinates(self.coord_file)
+
         self.debug = debug
 
-        self.axes = ["X", "Y", "Z"]
+    def run(self, gcode_file):
+        sx = Stepper("X", self.debug)
+        sy = Stepper("Y", self.debug)
+        sz = Stepper("Z", self.debug)
+        sx.enable()
+        sy.enable()
+        sz.enable()
+
+        gcodes = GCodeParser.read_lines(gcode_file)
+        machine = Machine(sx, sy, sz, self.debug)
+        for gcode in gcodes:
+            self.logger.info("Executing '{}'".format(gcode))
+            machine.execute(gcode)
+
+        sx.disable()
+        sy.disable()
+        sz.disable()
         if not self.debug:
-            GPIO.setmode(GPIO.BOARD)
-            GPIO.setwarnings(False)
-        self.configure_motors()
-
-    def configure_motors(self):
-        self.gpios = {}
-        self.pol = {}
-        self.lim = {}
-        self.motors = {}
-
-        glob_cfg = self.cfg["general"]
-        
-        ramp_type = glob_cfg["ramp_type"]
-        step_angle = glob_cfg["step_angle"]
-        travel_per_rev = glob_cfg["travel_per_rev"]
-        microsteps = glob_cfg["microsteps"]
-        accel_rate = glob_cfg["acceleration_rate"]
-        v_max = glob_cfg["max_velocity"]
-        feed_rate = glob_cfg["max_feed_rate"]
-        self.mp = MotionPlanner(
-            "traverse",
-            ramp_type,
-            step_angle,
-            travel_per_rev,
-            microsteps,
-            accel_rate,
-            v_max,
-            feed_rate,
-            self.debug
-        )
-        
-        for axis in self.axes:
-            axis_cfg = self.cfg["axes"][axis]
-            self.gpios[axis] = axis_cfg["gpio"]
-
-            if not self.debug:
-                GPIO.setup(self.gpios[axis].values(), GPIO.OUT)
-                GPIO.output(self.gpios[axis].values(), False)
-
-            self.pol[axis] = axis_cfg["polarity"]
-            driver = axis_cfg["driver"]
-
-            self.lim[axis] = axis_cfg["limits"]
-            
-            s = Stepper(
-                "Stepper {} axis".format(axis),
-                driver,
-                microsteps,
-                "CW",
-                self.gpios[axis],
-                self.debug
-            )
-
-            self.motors[axis] = s
-
-    def load_coordinates(self, coord_file):
-        with open(coord_file) as coord:
-            return json.load(coord)
-            
-    def save_coordinates(self):
-#        for axis in self.axes:
-#            self.cfg[axis]["position"] = self.coordinates[axis]
-        with open(self.coord_file, "w") as file_obj:
-            json.dump(self.coordinates, file_obj, indent=4, sort_keys=True)
-        
-    def route(self, gcode_file):
-        gcode = GCodeParser(gcode_file, self.lim)
-        for command in gcode.instructions:
-            self.logger.info(command)
-#            print(command)
-            # vectors for axis movement
-            delta = {}
-            for axis in self.axes:
-                delta[axis] = 0.0
-            for (prefix, val) in command:
-                if prefix == "G":
-                    if val == "00":
-                        self.logger.debug("Switching to Traverse Mode")
-                        self.mp.set_motion_type("traverse")
-                    elif val == "01":
-                        self.logger.debug("Switching to Feed Mode")
-                        self.mp.set_motion_type("feed")
-                    elif val == "28":
-                        self.logger.debug("Switching to Traverse Mode")
-                        self.mp.set_motion_type("traverse")
-                        for axis in self.axes:
-                            delta[axis] = - self.coordinates[axis]
-                elif prefix == "X":
-                    delta[prefix] = float(val) - self.coordinates[prefix]
-                elif prefix == "Y":
-                    delta[prefix] = float(val) - self.coordinates[prefix]
-                elif prefix == "Z":
-                    delta[prefix] = float(val) - self.coordinates[prefix]
-
-            for axis in self.axes:
-                if delta[axis] < 0:
-                    if self.pol[axis]:
-                        self.motors[axis].set_direction("CW")
-                    else:
-                        self.motors[axis].set_direction("CCW")
-                elif delta[axis] > 0:
-                    if self.pol[axis]:
-                        self.motors[axis].set_direction("CCW")
-                    else:
-                        self.motors[axis].set_direction("CW")
-                else:
-                    continue
-            motion_type = self.mp.get_motion_type()
-            if motion_type == "traverse":
-                self.logger.debug("Calculating motion vector - asynchronous")
-                # Starting axis movement as parallel processes
-                procs = []
-                proc = Process(target=move, args=(self.motors[axis], self.mp, delta[axis], self.debug))
-                procs.append(proc)
-
-                for proc in procs:
-                    proc.start()
-
-                for proc in procs:
-                    proc.join()
-
-            elif motion_type == "feed":
-                self.logger.debug("Calculating motion vector - interpolated")
-                interpolate(self.motors, self.mp, delta, self.debug)
-            else:
-                self.logger.debug("Unknown motion type. Abort!")
-            for axis in self.axes:
-                self.coordinates[axis] += delta[axis]
-
-
-
-        # Cleanup after processing
-        for axis in self.axes:
-            if not self.debug:
-                GPIO.output(self.gpios[axis].values(), False)
-        if not self.debug:
+            import RPi.GPIO as GPIO
             GPIO.cleanup()
 
 
 def main():
     parser = ArgumentParser(description="Process materials")
-    parser.add_argument("-i", "--gcode", dest="gcode", help="input g-code file", required=True)
-    parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Set debug mode")
+    parser.add_argument("-i", "--gcode", dest="gcode",
+                        help="input g-code file", required=True)
+    parser.add_argument("-d", "--debug", dest="debug",
+                        action="store_true", help="Set debug mode")
     args = parser.parse_args()
-    # GPIOs: [DIR,STP,M0,M1,M2]
-#    cfg = Config("settings.cfg")
-    cfg_file = "config.json"
 
-    router = Router(cfg_file, args.debug)
-    router.route(args.gcode)
-    router.save_coordinates()
+    router = Router(args.debug)
+
+    router.run(args.gcode)
 
 
 if __name__ == "__main__":
