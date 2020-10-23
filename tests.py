@@ -9,9 +9,9 @@ from gcode_exceptions import DuplicateGCodeError, GCodeNotFoundError, InvalidGCo
 from gcode_parser import GCodeParser
 from gcode import GCode
 
-from machine import convert_mm_per_min_to_pps
-
 from motion_planner import _calc_steps, _plan_move, _plan_interpolated_line, _plan_interpolated_circle
+
+from stepper import _configure_ramp_trapezoidal, _configure_ramp_sigmoidal, _add_ramp, _convert_mm_per_min_to_pulse
 
 
 class TestGCode(unittest.TestCase):
@@ -88,11 +88,99 @@ class TestGCodeParser(unittest.TestCase):
             GCodeParser.parse_line("G28 X20 Y10")
 
 
-class TestMachine(unittest.TestCase):
+class TestStepper(unittest.TestCase):
+
+    def test_configure_ramp_trapezoidal(self):
+        c = [0.01118, 0.004631]
+        self.assertEqual([round(x, 6) for x in _configure_ramp_trapezoidal(
+            200.0, 2, 1.8, 5, 200.0)], c)
+
+        c = [0.015811, 0.006549, 0.005025, 0.004237]
+        self.assertEqual([round(x, 6) for x in _configure_ramp_trapezoidal(
+            200.0, 2, 1.8, 5, 100.0)], c)
+
+        c = [
+            0.022361,
+            0.009262,
+            0.007107,
+            0.005992,
+            0.005279,
+            0.004772,
+            0.004389,
+            0.004085,
+            0.003836
+        ]
+        self.assertEqual([round(x, 6) for x in _configure_ramp_trapezoidal(
+            200.0, 2, 1.8, 5, 50.0)], c)
+
+    def test_configure_ramp_sigmoidal(self):
+        c = [0.005171, 0.004213, 0.003924, 0.003819, 0.003778]
+        self.assertEqual([round(x, 6) for x in _configure_ramp_sigmoidal(
+            200.0, 2, 1.8, 5, 200.0)], c)
+
+        c = [
+            0.013533,
+            0.008808,
+            0.006913,
+            0.005905,
+            0.005291,
+            0.004886,
+            0.004604,
+            0.004402,
+            0.004253,
+            0.004141,
+            0.004056,
+            0.00399,
+            0.003939,
+            0.0039,
+            0.003869,
+            0.003844,
+            0.003825,
+            0.003809,
+            0.003797,
+            0.003788,
+            0.00378,
+            0.003774,
+            0.003769
+        ]
+        self.assertEqual([round(x, 6) for x in _configure_ramp_sigmoidal(
+            200.0, 2, 1.8, 5, 50.0)], c)
+
+    def test_add_ramp(self):
+        c = [0.015811, 0.006549, 0.005025, 0.004237]
+        interval = [1, 1, 0, 0, 1, 1, 1, 0, 0, 0]
+        result = [
+            (1, 0.0079055),
+            (1, 0.0032745),
+            (0, 0.0025125),
+            (0, 0.0021185),
+            (1, 0.002),
+            (1, 0.002),
+            (1, 0.0021185),
+            (0, 0.0025125),
+            (0, 0.0032745),
+            (0, 0.0079055)
+        ]
+        self.assertEqual(_add_ramp(interval, c, 0.004), result)
+
+        c = [0.015811, 0.006549, 0.005025, 0.004237]
+        interval = [1, 1, 0, 0, 1, 1]
+        result = [
+            (1, 0.0079055),
+            (1, 0.0032745),
+            (0, 0.0025125),
+            (0, 0.0025125),
+            (1, 0.0032745),
+            (1, 0.0079055)
+        ]
+        self.assertEqual(_add_ramp(interval, c, 0.004), result)
+
     def test_convert_mm_per_min_to_pps(self):
 
-        self.assertEqual(convert_mm_per_min_to_pps(1200, 5, 1.8, 2), 1600.0)
-        self.assertEqual(convert_mm_per_min_to_pps(1200, 5, 1.8, 1), 800.0)
+        self.assertEqual(_convert_mm_per_min_to_pulse(
+            1200, 5, 1.8, 2), 0.000625)
+        self.assertEqual(_convert_mm_per_min_to_pulse(
+            1200, 5, 1.8, 1), 0.00125)
 
 
 class TestMotionPlanner(unittest.TestCase):

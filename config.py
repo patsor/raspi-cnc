@@ -1,13 +1,17 @@
 
 import os
 
+# Global settings
+module_dir = os.path.dirname(os.path.realpath(__file__))
+coord_file = os.path.join(module_dir, "coord.json")
+logfile = os.path.join(module_dir, "logs", "main.log")
+
 steppers = {
     "default": {
         "driver": "DRV8825",
         "mode": 2,
         "direction": "CW",
         "step_angle": 1.8,
-        "step_freq": 5000.0,
         "gpios": {
             "dir": 16,       # DIR
             "step": 18,      # STEP
@@ -22,7 +26,6 @@ steppers = {
         "mode": 2,
         "direction": "CW",
         "step_angle": 1.8,
-        "step_freq": 5000.0,
         "gpios": {
             "dir": 16,       # DIR
             "step": 18,      # STEP
@@ -37,7 +40,6 @@ steppers = {
         "mode": 2,
         "direction": "CW",
         "step_angle": 1.8,
-        "step_freq": 5000.0,
         "gpios": {
             "dir": 8,       # DIR
             "step": 10,     # STEP
@@ -49,11 +51,9 @@ steppers = {
     },
     "Z": {
         "driver": "DRV8825",
-        "mode": 8,
+        "mode": 2,
         "direction": "CW",
         "step_angle": 1.8,
-        "step_freq": 20000.0,
-        "polarity": True,
         "gpios": {
             "dir": 38,       # DIR
             "step": 40,      # STEP
@@ -98,42 +98,38 @@ drivers = {
 axes = {
     "X": {
         "traversal_rate": 3750.0,     # in mm/min
-        "feed_rate": 800.0,  # in mm/min
+        "feed_rate": 2000.0,  # in mm/min
         "limits": [
             0.0,
             800.0
         ],
         "polarity": False,
         "lead": 5,     # in mm
+        "ramp_type": "sigmoidal",
+        "accel": 80.0   # in mm/s^2
     },
     "Y": {
         "traversal_rate": 3750.0,     # in mm/min
-        "feed_rate": 800.0,  # in mm/min
+        "feed_rate": 2000.0,  # in mm/min
         "limits": [
             0.0,
             600.0
         ],
         "polarity": False,
         "lead": 5,     # in mm
+        "ramp_type": "sigmoidal",
+        "accel": 80.0   # in mm/s^2
     },
     "Z": {
         "traversal_rate": 3750.0,     # in mm/min
-        "feed_rate": 400.0,  # in mm/min
+        "feed_rate": 2000.0,  # in mm/min
         "limits": [
             0.0,
             100.0
         ],
         "polarity": True,
         "lead": 5,     # in mm
+        "ramp_type": "sigmoidal",
+        "accel": 80.0   # in mm/s^2
     }
 }
-
-module_dir = os.path.dirname(os.path.realpath(__file__))
-
-coord_file = os.path.join(module_dir, "coord.json")
-logfile = os.path.join(module_dir, "logs", "main.log")
-max_feed_rate = 500.0
-max_traverse_rate = 1200.0
-max_velocity = 1600.0
-ramp_type = "sigmoidal"
-acceleration_rate = 50.0

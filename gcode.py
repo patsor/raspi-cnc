@@ -4,7 +4,7 @@ class GCode(object):
 
     def __str__(self):
         string_repr = ""
-        for key in ("N", "G", "X", "Y", "Z", "I", "J"):
+        for key in ("N", "G", "X", "Y", "Z", "I", "J", "R"):
             val = key + self.params[key] + " " if self.get(key) else ""
             string_repr += val
         return string_repr.strip()

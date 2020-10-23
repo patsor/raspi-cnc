@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import time
-import math
 import logging
 from argparse import ArgumentParser
 
@@ -137,19 +135,6 @@ class MotionPlanner(object):
         self.az = az
         self.debug = debug
 
-        #self.t_accel = {}
-        #self.n_accel = {}
-
-        # (step_timings, c_total) = self.configure_ramp(
-        #    cfg.max_traverse_rate, cfg.ramp_type)
-        #self.t_accel["traverse"] = step_timings
-        #self.n_accel["traverse"] = len(step_timings)
-
-        # (step_timings, c_total) = self.configure_ramp(
-        #    cfg.max_feed_rate, step_angle, mode, travel_per_rev, acceleration_rate, cfg.ramp_type)
-        #self.t_accel["feed"] = step_timings
-        #self.n_accel["feed"] = len(step_timings)
-
     def plan_move(self, x, y, z, sx, sy, sz):
         steps_x = _calc_steps(x, sx.step_angle, sx.mode, self.ax["lead"])
         steps_y = _calc_steps(y, sy.step_angle, sy.mode, self.ay["lead"])
@@ -164,169 +149,6 @@ class MotionPlanner(object):
     def plan_interpolated_circle(self, r, sx, sy):
         steps_r = _calc_steps(r, sx.step_angle, sx.mode, self.ax["lead"])
         return _plan_interpolated_circle(steps_r)
-
-    def configure_ramp(self, vm, step_angle, mode, travel_per_rev, acceleration_rate, method="trapezoidal"):
-        if method == "trapezoidal":
-            return (self._configure_ramp_trapezoidal(vm, step_angle, mode, travel_per_rev, acceleration_rate))
-        elif method == "sigmoidal":
-            return (self._configure_ramp_sigmoidal(vm, step_angle, mode, travel_per_rev, acceleration_rate))
-        elif method == "polynomial":
-            return (self._configure_ramp_polynomial(vm, step_angle, mode, travel_per_rev, acceleration_rate))
-
-    def _configure_ramp_trapezoidal(self, vm, step_angle, mode, travel_per_rev, acceleration_rate):
-        self.logger.info(
-            "Generating trapezoidal ramp profile [v_max={}]".format(vm))
-#        outf = open("ramp_profile_t" + str(int(vm)) + ".csv", "w")
-        sqrt = math.sqrt
-        # steps per revolution: microstepping mode as factor
-        spr = 360.0 / step_angle * mode
-        # Number of steps it takes to move axis 1mm
-        steps_per_mm = spr / travel_per_rev
-        # linear movement along the axes per step
-        # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
-        # [rotation_angle = 2 * PI / SPR]
-        angle = 2 * math.pi / spr
-        # Convert target velocity from mm/min to rad/s
-        w = vm / 60 * steps_per_mm * angle
-        # Convert acceleration from mm/s^2 to rad/s^2
-        a = acceleration_rate * steps_per_mm * angle
-        # Calculation of number of steps needed to accelerate/decelerate
-        # vf = final velocity (rad/s)
-        # a = acceleration (rad/s^2)
-        # [n_steps = vf^2 / (2 * rotation_angle * a)]
-        num_steps = int(round(w**2 / (2 * angle * a)))
-        # Calculation of initial step duration during acceleration/deceleration ph\ase
-        # [c0 = (f=1) * sqrt(2 * rotation_angle / a)]
-        c0 = sqrt(2 * angle / a)
-        # Add time intervals for steps to achieve linear acceleration
-#        t = 0.0
-        c = [c0]
-#        cn = c0
-        for i in range(1, num_steps):
-            cn = c0 * (sqrt(i+1) - sqrt(i))
-#            t += cn
-#            outf.write("{};{}\n".format(t, 1.0/cn/40*60))
-            c.append(cn)
-        # Get the total duration of all acceleration steps
-        # should be [t_a = cf/a]
-        c_total = sum(c)
-#        outf.close()
-        return (c, c_total)
-
-    def _configure_ramp_sigmoidal(self, vm, step_angle, mode, travel_per_rev, acceleration_rate):
-        self.logger.info(
-            "Generating sigmoidal ramp profile [v_max={}]".format(vm))
-#        outf = open("ramp_profile_s" + str(int(vm)) + ".csv", "w")
-        # steps per revolution: microstepping mode as factor
-        spr = 360.0 / step_angle * mode
-        # Number of steps it takes to move axis 1mm
-        steps_per_mm = spr / travel_per_rev
-        # linear movement along the axes per step
-        # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
-        # [rotation_angle = 2 * PI / SPR]
-        angle = 2 * math.pi / spr
-        # Convert target velocity from mm/min to rad/s
-        w = vm / 60 * steps_per_mm * angle
-        # Convert acceleration from mm/s^2 to rad/s^2
-        a = acceleration_rate * steps_per_mm * angle
-        ti = 0.4
-        # pre-calculated values
-        w_4_a = w / (4*a)
-        a_4_w = (4*a) / w
-        e_ti = math.e**(a_4_w*ti)
-        e_n = math.e**(a_4_w*angle/w)
-        t_mod = ti - w_4_a * math.log(0.005)
-
-        num_steps = int(round(
-            w**2 * (math.log(math.e**(a_4_w*t_mod) + e_ti) - math.log(e_ti + 1)) / (4*a*angle)))
-#        t = 0.0
-        c = []
-        for i in range(1, num_steps):
-            cn = w_4_a * \
-                math.log(((e_ti + 1) * e_n**(i+1) - e_ti) /
-                         ((e_ti + 1) * e_n**i - e_ti))
-#            t += cn
-#            outf.write("{};{}\n".format(t, 1.0/cn/steps_per_mm*60))
-            c.append(cn)
-        # Get the total duration of all acceleration steps
-        # should be [t_a = cf/a]
-        c_total = sum(c)
-#        outf.close()
-        return (c, c_total)
-
-    def _configure_ramp_polynomial(self, vm, step_angle, mode, travel_per_rev, acceleration_rate):
-        sqrt = math.sqrt
-        # steps per revolution: microstepping mode as factor
-        spr = 360.0 / step_angle * mode
-        # Number of steps it takes to move axis 1mm
-        steps_per_mm = spr / travel_per_rev
-        # linear movement along the axes per step
-        # angle of rotation (phi) per step in rad: 2 * PI = 360 degrees
-        # [rotation_angle = 2 * PI / SPR]
-        step_angle_in_rad = 2 * math.pi / spr
-        # Convert target velocity from mm/min to rad/s
-        v3 = vm / 60 * steps_per_mm * step_angle_in_rad
-        # Convert acceleration from mm/s^2 to rad/s^2
-        accel_in_rad = acceleration_rate * steps_per_mm * step_angle_in_rad
-        # Calculation of number of steps needed to accelerate/decelerate
-        # Concave segment
-
-        v1 = v3 / 4
-        v2 = v3 * 3 / 4
-        print("a(T/2) = {}".format(accel_in_rad))
-        print("v(0) = 0")
-        print("v(P1) = {}".format(v1))
-        print("v(P2) = {}".format(v2))
-        print("v(T) = {}".format(v3))
-        n1 = int(round(v1**2 / (step_angle_in_rad * accel_in_rad)))
-        n2 = int(round(v2**2 / (2 * accel_in_rad * step_angle_in_rad))) + n1
-        n3 = int(round(2 * v3**3 / (step_angle_in_rad * accel_in_rad**2))) + n2
-        print(n1, n2, n3)
-        ntotal = n3
-        # Add time intervals for steps to achieve linear acceleration
-
-        cn = 0
-        an = 0
-        period = "none"
-        c = []
-        for i in range(n3):
-            # Concave period of the acceleration curve
-            if i <= n1:
-                period = "concave"
-                an = (i+1) / float(n1+1) * accel_in_rad
-                c0 = (2 * step_angle_in_rad / an)**(1./3)
-                cn_i_plus_1 = (i + 1)**(1./3)
-                cn_i = (i)**(1./3)
-                cn = c0 * (cn_i_plus_1 - cn_i)
-                c.append(cn)
-            # Linear period of the acceleration curve
-            elif n1 < i <= n2:
-                period = "linear"
-                an = accel_in_rad
-                c0 = sqrt(2 * step_angle_in_rad / an)
-                cn_i_plus_1 = sqrt(i + 1)
-                cn_i = sqrt(i)
-                # TODO: the linear period underlies some y axis section
-                # parameter C has to be found => 2/step_angle?
-                ct = c0 * (cn_i_plus_1 - cn_i)
-                vt = 1 / ct * step_angle_in_rad - accel_in_rad / (v2 * 2)
-                cn = 1 / vt * step_angle_in_rad
-                c.append(cn)
-            # Convex period of the acceleration curve
-            # TODO: not perfectly fitting, needs to be investigated further
-            # maybe there is also some y axis section in the opposite direction
-            elif n2 < i < n3:
-                period = "convex"
-                an = ((n3) - (i-n2)) / float(n3) * accel_in_rad
-                c0 = (2 * step_angle_in_rad / an)**(1./3)
-                cn_i_plus_1 = (i + 1)**(1./3)
-                cn_i = (i)**(1./3)
-                ct = c0 * (cn_i_plus_1 - cn_i)
-                vt = 1 / ct * step_angle_in_rad + accel_in_rad / (v3 * 2)
-                cn = 1 / vt * step_angle_in_rad
-                c.append(cn)
-            print(i, period, an, 1/cn, 1/cn*step_angle_in_rad)
-        return c
 
 
 def main():
