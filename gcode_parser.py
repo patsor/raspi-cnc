@@ -5,7 +5,12 @@ from gcode import GCode
 
 from gcode_exceptions import DuplicateGCodeError, GCodeNotFoundError, InvalidGCodeError, MissingGCodeError, UnsupportedGCodeError, GCodeOutOfBoundsError
 
-supported_gcodes = ("00", "01", "02", "28")
+supported_gcodes = {
+    "00": "Rapid positioning",
+    "01": "Linear interpolation",
+    "02": "Circular interpolation, clockwise",
+    "28": "Return to home position",
+}
 
 
 def is_number(s):
@@ -18,7 +23,7 @@ def is_number(s):
 
 class GCodeParser(object):
 
-    @staticmethod
+    @ staticmethod
     def read_lines(gcode_file):
         gcode_list = []
         with open(gcode_file) as inf:
@@ -29,7 +34,7 @@ class GCodeParser(object):
                     gcode_list.append(gcode)
         return gcode_list
 
-    @staticmethod
+    @ staticmethod
     def parse_line(line):
         line = line.strip()
         params = {}
@@ -56,7 +61,7 @@ class GCodeParser(object):
 
             # Check if X, Y, Z parameters fall in axis range
             if key in ("X", "Y", "Z"):
-                limits = cfg.steppers[key]["limits"]
+                limits = cfg.axes[key]["limits"]
                 if float(val) < limits[0] or float(val) > limits[1]:
                     raise GCodeOutOfBoundsError(
                         line, "GCode out of bounds")
@@ -87,4 +92,8 @@ class GCodeParser(object):
                     raise InvalidGCodeError(line, "Missing R parameter")
                 if any(key in params for key in ("X", "Y", "Z")):
                     raise InvalidGCodeError(line, "Only R parameter allowed")
+            elif params["G"] == "28":
+                if any(key in params for key in ("X", "Y", "Z")):
+                    raise InvalidGCodeError(
+                        line, "XYZ during homing not allowed")
         return params

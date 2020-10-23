@@ -3,12 +3,15 @@
 import os
 import unittest
 
-from motion_planner import _calc_steps, _plan_move, _plan_interpolated_line, _plan_interpolated_circle
 
 from gcode_exceptions import DuplicateGCodeError, GCodeNotFoundError, InvalidGCodeError, MissingGCodeError, UnsupportedGCodeError, GCodeOutOfBoundsError
 
 from gcode_parser import GCodeParser
 from gcode import GCode
+
+from machine import convert_mm_per_min_to_pps
+
+from motion_planner import _calc_steps, _plan_move, _plan_interpolated_line, _plan_interpolated_circle
 
 
 class TestGCode(unittest.TestCase):
@@ -80,6 +83,16 @@ class TestGCodeParser(unittest.TestCase):
 
         with self.assertRaises(InvalidGCodeError):
             GCodeParser.parse_line("G01 X20 Y20 Z20")
+
+        with self.assertRaises(InvalidGCodeError):
+            GCodeParser.parse_line("G28 X20 Y10")
+
+
+class TestMachine(unittest.TestCase):
+    def test_convert_mm_per_min_to_pps(self):
+
+        self.assertEqual(convert_mm_per_min_to_pps(1200, 5, 1.8, 2), 1600.0)
+        self.assertEqual(convert_mm_per_min_to_pps(1200, 5, 1.8, 1), 800.0)
 
 
 class TestMotionPlanner(unittest.TestCase):

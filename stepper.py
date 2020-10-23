@@ -19,8 +19,7 @@ class Stepper(object):
         self.mode = stepper_cfg["mode"]
         self.direction = stepper_cfg["direction"]
         self.step_angle = stepper_cfg["step_angle"]
-        self.travel_per_rev = stepper_cfg["travel_per_rev"]
-        self.step_on_off = 1.0 / (stepper_cfg["step_freq"] * 2)
+        self.step_freq = stepper_cfg["step_freq"]
         self.gpios = stepper_cfg["gpios"]
 
         self.logger = logging.getLogger(self.name)
@@ -98,9 +97,15 @@ class Stepper(object):
             time.sleep(0.001)
         self.direction = direction
 
+    def get_step_frequency(self):
+        return self.step_freq
+
+    def set_step_frequency(self, freq):
+        self.step_freq = freq
+
     def step(self, interval):
         gpio_step = self.gpios["step"]
-        delay = self.step_on_off
+        delay = 1.0 / (self.step_freq * 2)
         for i in interval:
             if i == -1:
                 self.set_direction("CCW")

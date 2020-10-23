@@ -23,12 +23,6 @@ steppers = {
         "direction": "CW",
         "step_angle": 1.8,
         "step_freq": 5000.0,
-        "travel_per_rev": 5,  # in mm
-        "polarity": False,
-        "limits": [
-            0.0,
-            800.0
-        ],
         "gpios": {
             "dir": 16,       # DIR
             "step": 18,      # STEP
@@ -44,12 +38,6 @@ steppers = {
         "direction": "CW",
         "step_angle": 1.8,
         "step_freq": 5000.0,
-        "travel_per_rev": 5,  # in mm
-        "polarity": False,
-        "limits": [
-            0.0,
-            800.0
-        ],
         "gpios": {
             "dir": 8,       # DIR
             "step": 10,     # STEP
@@ -65,12 +53,7 @@ steppers = {
         "direction": "CW",
         "step_angle": 1.8,
         "step_freq": 20000.0,
-        "travel_per_rev": 5,  # in mm
         "polarity": True,
-        "limits": [
-            0.0,
-            100.0
-        ],
         "gpios": {
             "dir": 38,       # DIR
             "step": 40,      # STEP
@@ -110,6 +93,39 @@ drivers = {
             32: (1, 1, 1)
         },
     },
+}
+
+axes = {
+    "X": {
+        "traversal_rate": 3750.0,     # in mm/min
+        "feed_rate": 800.0,  # in mm/min
+        "limits": [
+            0.0,
+            800.0
+        ],
+        "polarity": False,
+        "lead": 5,     # in mm
+    },
+    "Y": {
+        "traversal_rate": 3750.0,     # in mm/min
+        "feed_rate": 800.0,  # in mm/min
+        "limits": [
+            0.0,
+            600.0
+        ],
+        "polarity": False,
+        "lead": 5,     # in mm
+    },
+    "Z": {
+        "traversal_rate": 3750.0,     # in mm/min
+        "feed_rate": 400.0,  # in mm/min
+        "limits": [
+            0.0,
+            100.0
+        ],
+        "polarity": True,
+        "lead": 5,     # in mm
+    }
 }
 
 module_dir = os.path.dirname(os.path.realpath(__file__))

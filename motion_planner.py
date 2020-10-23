@@ -12,8 +12,8 @@ def _transform_intervals(interval_list, factor=1):
     return [0 if ele == 1 or ele == -1 else 1 * factor for ele in interval_list]
 
 
-def _calc_steps(dist, step_angle, mode, travel_per_rev):
-    return int(round(abs(dist) * 360.0 / step_angle / travel_per_rev * mode))
+def _calc_steps(dist, step_angle, mode, lead):
+    return int(round(abs(dist) * 360.0 / step_angle / lead * mode))
 
 
 def _plan_move(steps_x, steps_y, steps_z):
@@ -130,8 +130,11 @@ def _plan_interpolated_circle(r):
 
 
 class MotionPlanner(object):
-    def __init__(self, debug=False):
+    def __init__(self, ax, ay, az, debug=False):
         self.logger = logging.getLogger("MotionPlanner")
+        self.ax = ax
+        self.ay = ay
+        self.az = az
         self.debug = debug
 
         #self.t_accel = {}
@@ -147,27 +150,19 @@ class MotionPlanner(object):
         #self.t_accel["feed"] = step_timings
         #self.n_accel["feed"] = len(step_timings)
 
-    def get_motion_type(self):
-        """Get motion type of stepper motor"""
-        return self.motion_type
-
-    def set_motion_type(self, motion_type):
-        """Set motion type of stepper motor"""
-        self.motion_type = motion_type
-
     def plan_move(self, x, y, z, sx, sy, sz):
-        steps_x = _calc_steps(x, sx.step_angle, sx.mode, sx.travel_per_rev)
-        steps_y = _calc_steps(y, sy.step_angle, sy.mode, sy.travel_per_rev)
-        steps_z = _calc_steps(z, sz.step_angle, sz.mode, sz.travel_per_rev)
+        steps_x = _calc_steps(x, sx.step_angle, sx.mode, self.ax["lead"])
+        steps_y = _calc_steps(y, sy.step_angle, sy.mode, self.ay["lead"])
+        steps_z = _calc_steps(z, sz.step_angle, sz.mode, self.az["lead"])
         return _plan_move(steps_x, steps_y, steps_z)
 
     def plan_interpolated_line(self, x, y, sx, sy):
-        steps_x = _calc_steps(x, sx.step_angle, sx.mode, sx.travel_per_rev)
-        steps_y = _calc_steps(y, sy.step_angle, sy.mode, sy.travel_per_rev)
+        steps_x = _calc_steps(x, sx.step_angle, sx.mode, self.ax["lead"])
+        steps_y = _calc_steps(y, sy.step_angle, sy.mode, self.ay["lead"])
         return _plan_interpolated_line(steps_x, steps_y)
 
     def plan_interpolated_circle(self, r, sx, sy):
-        steps_r = _calc_steps(r, sx.step_angle, sx.mode, sx.travel_per_rev)
+        steps_r = _calc_steps(r, sx.step_angle, sx.mode, self.ax["lead"])
         return _plan_interpolated_circle(steps_r)
 
     def configure_ramp(self, vm, step_angle, mode, travel_per_rev, acceleration_rate, method="trapezoidal"):
