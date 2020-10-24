@@ -44,17 +44,21 @@ def _plan_interpolated_line(steps_x, steps_y):
     py = 0
 
     while px != x or py != y:
-        # fitness(x) = f(x+1) - y
-        fitness = slope * (px + 1) - py
-        if fitness > 1:
+        # Compare the deviance to the slope
+        # e(x) = f(x+1) - (y + 1)
+        error = slope * (px + 1) - (py + 1)
+        # if error >= 0.5
+        if error >= 0.5 * slope:
             py += 1
             step_intervals_x.append(0)
             step_intervals_y.append(factor_y)
-        elif fitness < 1:
+        # if error <= -0.5
+        elif error <= -0.5:
             px += 1
             step_intervals_x.append(factor_x)
             step_intervals_y.append(0)
-        elif fitness == 1:
+        # if error in between -0.5 and 0.5
+        else:
             px += 1
             py += 1
             step_intervals_x.append(factor_x)
