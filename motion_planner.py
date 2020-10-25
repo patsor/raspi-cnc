@@ -11,7 +11,7 @@ def _transform_intervals(interval_list, factor=1):
 
 
 def _calc_steps(dist, step_angle, mode, lead):
-    return int(round(abs(dist) * 360.0 / step_angle / lead * mode))
+    return int(round(dist * 360.0 / step_angle / lead * mode))
 
 
 def _plan_move(steps_x, steps_y, steps_z):

@@ -357,7 +357,7 @@ def main():
     s.step(interval)
 
     s.disable()
-    GPIO.output(list(s["gpios"].values()), False)
+    GPIO.output(list(s.gpios.values()), False)
     GPIO.cleanup()
 
 
