@@ -95,6 +95,28 @@ def _plan_interpolated_line(steps_x, steps_y):
 
     return step_intervals_x, step_intervals_y
 
+def _plan_interpolated_circle_bresenham(r):
+    step_intervals_x = []
+    step_intervals_y = []
+
+    px = 0
+    py = r
+
+    d = 3 - 2 * r
+
+    while py > px:
+        px += 1
+
+        if d > 0:
+            py -= 1
+            step_intervals_x.append(1)
+            step_intervals_y.append(-1)
+            d += 4 * (px - py) + 10
+        else:
+            step_intervals_x.append(1)
+            step_intervals_y.append(0)
+            d += 4 * px + 6
+    return step_intervals_x, step_intervals_y
 
 def _plan_interpolated_circle(r):
     step_intervals_x = []
