@@ -26,6 +26,35 @@ def _plan_move(steps_x, steps_y, steps_z):
 
     return step_intervals_x, step_intervals_y, step_intervals_z
 
+def _plan_interpolated_line_bresenham(steps_x, steps_y):
+    if steps_y > steps_x:
+        step_intervals_y, step_intervals_x = _plan_interpolated_line_bresenham(steps_y, steps_x)
+        return step_intervals_x, step_intervals_y
+
+    step_intervals_x = []
+    step_intervals_y = []
+
+    factor_x = 1 if steps_x >= 0 else -1
+    factor_y = 1 if steps_y >= 0 else -1
+
+    x = abs(steps_x)
+    y = abs(steps_y)
+
+    d = 2 * y - x
+    py = 0
+
+    for i in range(x):
+        if d > 0:
+            d -= 2 * x
+            step_intervals_x.append(factor_x)
+            step_intervals_y.append(factor_y)
+        else:
+            step_intervals_x.append(factor_x)
+            step_intervals_y.append(0)
+        d += 2 * y
+
+    return step_intervals_x, step_intervals_y
+
 
 def _plan_interpolated_line(steps_x, steps_y):
 
@@ -66,6 +95,28 @@ def _plan_interpolated_line(steps_x, steps_y):
 
     return step_intervals_x, step_intervals_y
 
+def _plan_interpolated_circle_bresenham(r):
+    step_intervals_x = []
+    step_intervals_y = []
+
+    px = 0
+    py = r
+
+    d = 3 - 2 * r
+
+    while py > px:
+        px += 1
+
+        if d > 0:
+            py -= 1
+            step_intervals_x.append(1)
+            step_intervals_y.append(-1)
+            d += 4 * (px - py) + 10
+        else:
+            step_intervals_x.append(1)
+            step_intervals_y.append(0)
+            d += 4 * px + 6
+    return step_intervals_x, step_intervals_y
 
 def _plan_interpolated_circle(r):
     step_intervals_x = []
