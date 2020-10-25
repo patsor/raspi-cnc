@@ -206,30 +206,40 @@ class TestMotionPlanner(unittest.TestCase):
         x = [1, 1, 1, 1, 1, 1, 1, 1]
         y = [0, 1, 0, 1, 0, 1, 0, 1]
         self.assertEqual(_plan_interpolated_line(8, 4), (x, y))
+        self.assertEqual(_plan_interpolated_line_bresenham(8, 4), (x, y))
 
         x = [1, 1, 1, 1, 1, 1, 1, 1]
         y = [0, 0, 0, 0, 1, 0, 0, 0]
         self.assertEqual(_plan_interpolated_line(8, 1), (x, y))
+        self.assertEqual(_plan_interpolated_line_bresenham(8, 1), (x, y))
 
         x = [0, 0, 0, 0, 1, 0, 0, 0]
         y = [1, 1, 1, 1, 1, 1, 1, 1]
         self.assertEqual(_plan_interpolated_line(1, 8), (x, y))
+        self.assertEqual(_plan_interpolated_line_bresenham(1, 8), (x, y))
 
         x = [-1, -1, -1, -1, -1, -1, -1, -1]
         y = [0, 1, 0, 1, 0, 1, 0, 1]
         self.assertEqual(_plan_interpolated_line(-8, 4), (x, y))
+        self.assertEqual(_plan_interpolated_line_bresenham(-8, 4), (x, y))
+
 
         x = [0, 0, 0, 0, -1, 0, 0, 0]
         y = [1, 1, 1, 1, 1, 1, 1, 1]
         self.assertEqual(_plan_interpolated_line(-1, 8), (x, y))
+        self.assertEqual(_plan_interpolated_line_bresenham(-1, 8), (x, y))
+
 
         x = [0, 0, 0, 0, 1, 0, 0, 0]
         y = [-1, -1, -1, -1, -1, -1, -1, -1]
         self.assertEqual(_plan_interpolated_line(1, -8), (x, y))
+        self.assertEqual(_plan_interpolated_line_bresenham(1, -8), (x, y))
+
 
         x = [0, -1, 0, -1, 0, -1, 0, -1]
         y = [-1, -1, -1, -1, -1, -1, -1, -1]
         self.assertEqual(_plan_interpolated_line(-4, -8), (x, y))
+        self.assertEqual(_plan_interpolated_line_bresenham(-4, -8), (x, y))
 
     def test_interpolated_circle(self):
         x = [
