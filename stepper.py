@@ -180,8 +180,8 @@ def _add_ramp(interval, ramp, step_delay):
     return masked_interval
 
 
-def _convert_mm_per_min_to_pulse(value, lead, step_angle, mode):
-    return lead * 60 / value / mode / (360 / step_angle)
+# def _convert_mm_per_min_to_pulse(value, lead, step_angle, mode):
+#    return lead * 60 / value / mode / (360 / step_angle)
 
 
 class Stepper(object):

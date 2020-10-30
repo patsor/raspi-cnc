@@ -19,7 +19,8 @@ class Machine(object):
 
         self.debug = debug
 
-        self.mp = MotionPlanner(self.ax, self.ay, self.az)
+        self.mp = MotionPlanner(self.ax, self.ay, self.az,
+                                self.sx, self.sy, self.sz)
 
         self.coordinates = self.load_coordinates()
 
@@ -32,62 +33,65 @@ class Machine(object):
             json.dump(self.coordinates, file_obj, indent=4, sort_keys=True)
 
     def execute(self, gcode):
+        # Get values from GCode
+        f = gcode.get("F")
         g = gcode.get("G")
+        r = gcode.get("R")
         x = gcode.get("X")
         y = gcode.get("Y")
         z = gcode.get("Z")
-        r = gcode.get("R")
-        f = gcode.get("F")
 
-        delta_x = x - self.coordinates["X"] if x else 0
-        delta_y = y - self.coordinates["Y"] if y else 0
-        delta_z = z - self.coordinates["Z"] if z else 0
+        # Calculate axis deltas
+        dx = x - self.coordinates["X"] if x else 0
+        dy = y - self.coordinates["Y"] if y else 0
+        dz = z - self.coordinates["Z"] if z else 0
 
-        steps_x = []
-        steps_y = []
-        steps_z = []
+        # Init step intervals for X, Y and Z
+        ix = iy = iz = []
+
+        # Do action depending on GCode
         if g == "00":
-            self.sx.set_speed(self.ax["traversal_rate"])
-            self.sy.set_speed(self.ay["traversal_rate"])
-            self.sz.set_speed(self.az["traversal_rate"])
-            steps_x, steps_y, steps_z = self.mp.plan_move(
-                delta_x, delta_y, delta_z, self.sx, self.sy, self.sz)
+            ix, iy, iz = self.mp.plan_move(dx, dy, dz)
         elif g == "01":
-            if f:
-                self.sx.set_speed(f)
-                self.sy.set_speed(f)
-                self.sz.set_speed(f)
+            feed_rate = f if f else self.ax["feed_rate"]
+
+            if x and y and not z:
+                ix, iy = self.mp.plan_interpolated_line(
+                    dx, dy, feed_rate, "XY")
+            elif x and not y and z:
+                ix, iz = self.mp.plan_interpolated_line(
+                    dx, dz, feed_rate, "XZ")
+            elif not x and y and z:
+                iy, iz = self.mp.plan_interpolated_line(
+                    dy, dz, feed_rate, "YZ")
             else:
-                self.sx.set_speed(self.ax["feed_rate"])
-                self.sy.set_speed(self.ay["feed_rate"])
-                self.sz.set_speed(self.az["feed_rate"])
-            steps_x, steps_y = self.mp.plan_interpolated_line(
-                delta_x, delta_y, self.sx, self.sy)
+                print("Error in GCode! 3D linear interpolation not yet implemented")
+
         elif g == "02":
-            if f:
-                self.sx.set_speed(f)
-                self.sy.set_speed(f)
-                self.sz.set_speed(f)
+            feed_rate = f if f else self.ax["feed_rate"]
+
+            if x and y and not z:
+                ix, iy = self.mp.plan_interpolated_circle(
+                    dx, dy, feed_rate, "XY")
+            elif x and not y and z:
+                ix, iz = self.mp.plan_interpolated_circle(
+                    dx, dz, feed_rate, "XZ")
+            elif not x and y and z:
+                iy, iz = self.mp.plan_interpolated_circle(
+                    dy, dz, feed_rate, "YZ")
             else:
-                self.sx.set_speed(self.ax["feed_rate"])
-                self.sy.set_speed(self.ay["feed_rate"])
-                self.sz.set_speed(self.az["feed_rate"])
-            steps_x, steps_y = self.mp.plan_interpolated_circle(
-                r, self.sx, self.sy)
+                print("Error in GCode! 3D circular interpolation not yet implemented")
+
         elif g == "28":
-            self.sx.set_speed(self.ax["traversal_rate"])
-            self.sy.set_speed(self.ay["traversal_rate"])
-            self.sz.set_speed(self.az["traversal_rate"])
-            delta_x = self.ax["limits"][0] - self.coordinates["X"]
-            delta_y = self.ay["limits"][0] - self.coordinates["Y"]
-            delta_z = self.az["limits"][0] - self.coordinates["Z"]
-            steps_x, steps_y, steps_z = self.mp.plan_move(
-                delta_x, delta_y, delta_z, self.sx, self.sy, self.sz)
+            dx = self.ax["limits"][0] - self.coordinates["X"]
+            dy = self.ay["limits"][0] - self.coordinates["Y"]
+            dz = self.az["limits"][0] - self.coordinates["Z"]
+            ix, iy, iz = self.mp.plan_move(dx, dy, dz)
 
         if not self.debug:
-            p1 = Process(target=self.sx.step, args=(steps_x,))
-            p2 = Process(target=self.sy.step, args=(steps_y,))
-            p3 = Process(target=self.sz.step, args=(steps_z,))
+            p1 = Process(target=self.sx.step, args=(ix,))
+            p2 = Process(target=self.sy.step, args=(iy,))
+            p3 = Process(target=self.sz.step, args=(iz,))
 
             p1.start()
             p2.start()
@@ -96,7 +100,7 @@ class Machine(object):
             p1.join()
             p2.join()
             p3.join()
-        self.coordinates["X"] += delta_x
-        self.coordinates["Y"] += delta_y
-        self.coordinates["Z"] += delta_z
+        self.coordinates["X"] += dx
+        self.coordinates["Y"] += dy
+        self.coordinates["Z"] += dz
         self.save_coordinates()

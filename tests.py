@@ -3,15 +3,30 @@
 import os
 import unittest
 
-
-from gcode_exceptions import DuplicateGCodeError, GCodeNotFoundError, InvalidGCodeError, MissingGCodeError, UnsupportedGCodeError, GCodeOutOfBoundsError
-
-from gcode_parser import GCodeParser
 from gcode import GCode
 
-from motion_planner import _calc_steps, _plan_move, _plan_interpolated_line, _plan_interpolated_circle
+from gcode_exceptions import DuplicateGCodeError
+from gcode_exceptions import GCodeNotFoundError
+from gcode_exceptions import GCodeOutOfBoundsError
+from gcode_exceptions import InvalidGCodeError
+from gcode_exceptions import MissingGCodeError
+from gcode_exceptions import UnsupportedGCodeError
 
-from stepper import _configure_ramp_trapezoidal, _configure_ramp_sigmoidal, _add_ramp, _convert_mm_per_min_to_pulse
+from gcode_parser import GCodeParser
+
+from motion_planner import _mm_to_steps
+from motion_planner import _mm_per_min_to_pps
+from motion_planner import _plan_interpolated_circle_bresenham
+from motion_planner import _plan_interpolated_circle_constant
+from motion_planner import _plan_interpolated_circle_midpoint
+from motion_planner import _plan_interpolated_line_bresenham
+from motion_planner import _plan_interpolated_line_constant
+from motion_planner import _plan_move
+
+from stepper import _configure_ramp_trapezoidal
+from stepper import _configure_ramp_sigmoidal
+from stepper import _convert_mm_per_min_to_pulse
+from stepper import _add_ramp
 
 
 class TestGCode(unittest.TestCase):
@@ -185,76 +200,173 @@ class TestStepper(unittest.TestCase):
 
 class TestMotionPlanner(unittest.TestCase):
 
-    def test_calc_steps(self):
-        self.assertEqual(_calc_steps(100, 1.8, 1, 5), 4000)
-        self.assertEqual(_calc_steps(5, 1.8, 2, 5), 400)
-        self.assertEqual(_calc_steps(23, 1.8, 4, 5), 3680)
-        self.assertEqual(_calc_steps(-40, 1.8, 1, 5), 1600)
+    def test_mm_to_steps(self):
+        self.assertEqual(_mm_to_steps(100, 1.8, 1, 5), 4000)
+        self.assertEqual(_mm_to_steps(5, 1.8, 2, 5), 400)
+        self.assertEqual(_mm_to_steps(23, 1.8, 4, 5), 3680)
+        self.assertEqual(_mm_to_steps(-40, 1.8, 1, 5), -1600)
+
+    def test_mm_per_min_to_pps(self):
+        self.assertEqual(_mm_per_min_to_pps(1200, 1.8, 1, 5), 800)
+        self.assertEqual(_mm_per_min_to_pps(1200, 1.8, 2, 5), 1600)
+        self.assertEqual(_mm_per_min_to_pps(600, 1.8, 4, 5), 1600)
+        self.assertEqual(_mm_per_min_to_pps(600, 1.8, 8, 10), 1600)
 
     def test_move(self):
-        x = [1, 1, 1, 1, 1, 1, 1, 1]
-        y = [1, 1, 1, 1]
-        z = [1, 1, 1]
-        self.assertEqual(_plan_move(8, 4, 3), (x, y, z))
+        x = [(1, 0.005)] * 8
+        y = [(1, 0.01)] * 4
+        z = [(1, 0.02)] * 3
+        self.assertEqual(_plan_move(8, 4, 3, 200, 100, 50), (x, y, z))
 
-        x = [-1, -1, -1, -1, -1, -1, -1, -1]
-        y = [1, 1, 1, 1]
-        z = [-1, -1, -1]
-        self.assertEqual(_plan_move(-8, 4, -3), (x, y, z))
+        x = [(-1, 0.005)] * 8
+        y = [(1, 0.01)] * 4
+        z = [(-1, 0.02)] * 3
+        self.assertEqual(_plan_move(-8, 4, -3, 200, 100, 50), (x, y, z))
 
-    def test_interpolated_line(self):
-        x = [1, 1, 1, 1, 1, 1, 1, 1]
-        y = [0, 1, 0, 1, 0, 1, 0, 1]
-        self.assertEqual(_plan_interpolated_line(8, 4), (x, y))
-        self.assertEqual(_plan_interpolated_line_bresenham(8, 4), (x, y))
+    def test_interpolated_line_bresenham(self):
+        x = [(1, 0.005)] * 8
+        y = [
+            (0, 0.01),
+            (1, 0.01),
+            (0, 0.01),
+            (1, 0.01),
+            (0, 0.01),
+            (1, 0.01),
+            (0, 0.01),
+            (1, 0.01)
+        ]
+        self.assertEqual(_plan_interpolated_line_bresenham(
+            8, 4, 200, 100), (x, y))
 
-        x = [1, 1, 1, 1, 1, 1, 1, 1]
-        y = [0, 0, 0, 0, 1, 0, 0, 0]
-        self.assertEqual(_plan_interpolated_line(8, 1), (x, y))
-        self.assertEqual(_plan_interpolated_line_bresenham(8, 1), (x, y))
+        x = [(1, 0.005)] * 8
+        y = [
+            (0, 0.01),
+            (0, 0.01),
+            (0, 0.01),
+            (0, 0.01),
+            (1, 0.01),
+            (0, 0.01),
+            (0, 0.01),
+            (0, 0.01)
+        ]
+        self.assertEqual(_plan_interpolated_line_bresenham(
+            8, 1, 200, 100), (x, y))
 
-        x = [0, 0, 0, 0, 1, 0, 0, 0]
-        y = [1, 1, 1, 1, 1, 1, 1, 1]
-        self.assertEqual(_plan_interpolated_line(1, 8), (x, y))
-        self.assertEqual(_plan_interpolated_line_bresenham(1, 8), (x, y))
-
-        x = [-1, -1, -1, -1, -1, -1, -1, -1]
-        y = [0, 1, 0, 1, 0, 1, 0, 1]
-        self.assertEqual(_plan_interpolated_line(-8, 4), (x, y))
-        self.assertEqual(_plan_interpolated_line_bresenham(-8, 4), (x, y))
-
-
-        x = [0, 0, 0, 0, -1, 0, 0, 0]
-        y = [1, 1, 1, 1, 1, 1, 1, 1]
-        self.assertEqual(_plan_interpolated_line(-1, 8), (x, y))
-        self.assertEqual(_plan_interpolated_line_bresenham(-1, 8), (x, y))
-
-
-        x = [0, 0, 0, 0, 1, 0, 0, 0]
-        y = [-1, -1, -1, -1, -1, -1, -1, -1]
-        self.assertEqual(_plan_interpolated_line(1, -8), (x, y))
-        self.assertEqual(_plan_interpolated_line_bresenham(1, -8), (x, y))
-
-
-        x = [0, -1, 0, -1, 0, -1, 0, -1]
-        y = [-1, -1, -1, -1, -1, -1, -1, -1]
-        self.assertEqual(_plan_interpolated_line(-4, -8), (x, y))
-        self.assertEqual(_plan_interpolated_line_bresenham(-4, -8), (x, y))
-
-    def test_interpolated_circle(self):
         x = [
-            0, 0, 1, 0, 0, 1, 1, 0, 1, 1,       # II
-            1, 1, 0, 1, 1, 0, 0, 1, 0, 0,       # I
-            0, 0, -1, 0, 0, -1, -1, 0, -1, -1,  # IV
-            -1, -1, 0, -1, -1, 0, 0, -1, 0, 0   # III
+            (0, 0.01),
+            (0, 0.01),
+            (0, 0.01),
+            (0, 0.01),
+            (1, 0.01),
+            (0, 0.01),
+            (0, 0.01),
+            (0, 0.01)
+        ]
+        y = [(1, 0.005)] * 8
+        self.assertEqual(_plan_interpolated_line_bresenham(
+            1, 8, 100, 200), (x, y))
+
+        x = [(-1, 0.005)] * 8
+        y = [
+            (0, 0.01),
+            (1, 0.01),
+            (0, 0.01),
+            (1, 0.01),
+            (0, 0.01),
+            (1, 0.01),
+            (0, 0.01),
+            (1, 0.01)
+        ]
+        self.assertEqual(_plan_interpolated_line_bresenham(
+            -8, 4, 200, 100), (x, y))
+
+        x = [(x, 0.01) for x in [0, 0, 0, 0, -1, 0, 0, 0]]
+        y = [(1, 0.005)] * 8
+        self.assertEqual(_plan_interpolated_line_bresenham(
+            -1, 8, 100, 200), (x, y))
+
+        x = [(x, 0.01) for x in [0, 0, 0, 0, 1, 0, 0, 0]]
+        y = [(-1, 0.005)] * 8
+        self.assertEqual(_plan_interpolated_line_bresenham(
+            1, -8, 100, 200), (x, y))
+
+        x = [(x, 0.01) for x in [0, -1, 0, -1, 0, -1, 0, -1]]
+        y = [(-1, 0.005)] * 8
+        self.assertEqual(_plan_interpolated_line_bresenham(
+            -4, -8, 100, 200), (x, y))
+
+    def test_interpolated_line_constant(self):
+        x = [(1, 0.005)] * 8
+        y = [(1, 0.01)] * 4
+        self.assertEqual(_plan_interpolated_line_constant(
+            8, 4, 200, 100), (x, y))
+
+        x = [(1, 0.005)] * 8
+        y = [(1, 0.01)] * 1
+        self.assertEqual(_plan_interpolated_line_constant(
+            8, 1, 200, 100), (x, y))
+
+        x = [(1, 0.01)] * 1
+        y = [(1, 0.005)] * 8
+        self.assertEqual(_plan_interpolated_line_constant(
+            1, 8, 100, 200), (x, y))
+
+        x = [(-1, 0.005)] * 8
+        y = [(1, 0.01)] * 4
+        self.assertEqual(_plan_interpolated_line_constant(
+            -8, 4, 200, 100), (x, y))
+
+        x = [(-1, 0.01)] * 1
+        y = [(1, 0.005)] * 8
+        self.assertEqual(_plan_interpolated_line_constant(
+            -1, 8, 100, 200), (x, y))
+
+    def test_interpolated_circle_bresenham(self):
+        x = [
+            0, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 0, 0, -1, -1, -1,
+            -1, -1, -1, -1, -1, -1, -1, 0
         ]
         y = [
-            1, 1, 0, 1, 1, 0, 0, 1, 0, 0,       # II
-            0, 0, -1, 0, 0, -1, -1, 0, -1, -1,  # I
-            -1, -1, 0, -1, -1, 0, 0, -1, 0, 0,  # IV
-            0, 0, 1, 0, 0, 1, 1, 0, 1, 1        # III
+            1, 1, 1, 1, 1, 0, 0, -1,
+            -1, -1, -1, -1, -1, -1, -1, -1,
+            -1, 0, 0, 1, 1, 1, 1, 1
         ]
-        self.assertEqual(_plan_interpolated_circle(5), (x, y))
+        self.assertEqual(_plan_interpolated_circle_bresenham(5), (x, y))
+
+        x = [
+            0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0,
+            0, 0, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, 0, 0,
+        ]
+        y = [
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0,
+            0, 0, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+            -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, 0, 0,
+            0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        ]
+        self.assertEqual(_plan_interpolated_circle_bresenham(10), (x, y))
+
+    def test_interpolated_circle_midpoint(self):
+        x = [
+            0, 0, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 0, 0,
+            0, 0, -1, -1, -1, -1, -1,
+            -1, -1, -1, -1, -1, 0, 0
+        ]
+        y = [
+            1, 1, 1, 1, 1, 0, 0,
+            0, 0, -1, -1, -1, -1, -1,
+            -1, -1, -1, -1, -1, 0, 0,
+            0, 0, 1, 1, 1, 1, 1
+        ]
+        self.assertEqual(_plan_interpolated_circle_midpoint(5), (x, y))
+
+    def test_interpolated_circle_constant(self):
+        x = [(1, 0.005)] * 20
+        y = []
+        self.assertEqual(_plan_interpolated_circle_constant(10, 200), (x, y))
 
 
 if __name__ == "__main__":
