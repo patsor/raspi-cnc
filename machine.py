@@ -16,6 +16,7 @@ class Machine(object):
         self.ax = cfg.axes["X"]
         self.ay = cfg.axes["X"]
         self.az = cfg.axes["X"]
+        self.plane = "XY"
 
         self.debug = debug
 
@@ -53,32 +54,34 @@ class Machine(object):
         if g == "00":
             ix, iy, iz = self.mp.plan_move(dx, dy, dz)
         elif g == "01":
-            feed_rate = f if f else self.ax["feed_rate"]
+            feed_rate = float(f) if f else self.ax["feed_rate"]
 
             if x and y and not z:
                 ix, iy = self.mp.plan_interpolated_line(
-                    dx, dy, feed_rate, "XY")
+                    dx, dy, dz, feed_rate, "XY")
             elif x and not y and z:
                 ix, iz = self.mp.plan_interpolated_line(
-                    dx, dz, feed_rate, "XZ")
+                    dx, dy, dz, feed_rate, "XZ")
             elif not x and y and z:
                 iy, iz = self.mp.plan_interpolated_line(
-                    dy, dz, feed_rate, "YZ")
+                    dx, dy, dz, feed_rate, "YZ")
             else:
                 print("Error in GCode! 3D linear interpolation not yet implemented")
 
         elif g == "02":
-            feed_rate = f if f else self.ax["feed_rate"]
+            feed_rate = float(f) if f else self.ax["feed_rate"]
+            if self.plane == "XY":
+                ix, iy = self.mp.plan_interpolated_arc(
+                    r, dx, dy, feed_rate, True, self.plane)
+            else:
+                print("Error in GCode! 3D circular interpolation not yet implemented")
 
-            if x and y and not z:
-                ix, iy = self.mp.plan_interpolated_circle(
-                    dx, dy, feed_rate, "XY")
-            elif x and not y and z:
-                ix, iz = self.mp.plan_interpolated_circle(
-                    dx, dz, feed_rate, "XZ")
-            elif not x and y and z:
-                iy, iz = self.mp.plan_interpolated_circle(
-                    dy, dz, feed_rate, "YZ")
+        elif g == "03":
+            feed_rate = float(f) if f else self.ax["feed_rate"]
+
+            if self.plane == "XY":
+                ix, iy = self.mp.plan_interpolated_arc(
+                    r, dx, dy, feed_rate, False, self.plane)
             else:
                 print("Error in GCode! 3D circular interpolation not yet implemented")
 

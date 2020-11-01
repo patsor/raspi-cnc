@@ -16,16 +16,14 @@ from gcode_parser import GCodeParser
 
 from motion_planner import _mm_to_steps
 from motion_planner import _mm_per_min_to_pps
+from motion_planner import _plan_interpolated_arc
 from motion_planner import _plan_interpolated_circle_bresenham
-from motion_planner import _plan_interpolated_circle_constant
-from motion_planner import _plan_interpolated_circle_midpoint
 from motion_planner import _plan_interpolated_line_bresenham
 from motion_planner import _plan_interpolated_line_constant
 from motion_planner import _plan_move
 
 from stepper import _configure_ramp_trapezoidal
 from stepper import _configure_ramp_sigmoidal
-from stepper import _convert_mm_per_min_to_pulse
 from stepper import _add_ramp
 
 
@@ -190,13 +188,6 @@ class TestStepper(unittest.TestCase):
         ]
         self.assertEqual(_add_ramp(interval, c, 0.004), result)
 
-    def test_convert_mm_per_min_to_pps(self):
-
-        self.assertEqual(_convert_mm_per_min_to_pulse(
-            1200, 5, 1.8, 2), 0.000625)
-        self.assertEqual(_convert_mm_per_min_to_pulse(
-            1200, 5, 1.8, 1), 0.00125)
-
 
 class TestMotionPlanner(unittest.TestCase):
 
@@ -348,25 +339,98 @@ class TestMotionPlanner(unittest.TestCase):
         ]
         self.assertEqual(_plan_interpolated_circle_bresenham(10), (x, y))
 
-    def test_interpolated_circle_midpoint(self):
+    def test_interpolated_arc_cw(self):
         x = [
-            0, 0, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 0, 0,
-            0, 0, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, 0, 0
+            (1, 0.0451),
+            (1, 0.0192),
+            (1, 0.0152),
+            (1, 0.0132),
+            (1, 0.012),
+            (1, 0.0112),
+            (1, 0.0107),
+            (1, 0.0103),
+            (1, 0.0101),
+            (1, 0.01),
+            (1, 0.01),
+            (1, 0.0101),
+            (1, 0.0103),
+            (1, 0.0107),
+            (1, 0.0112),
+            (1, 0.012),
+            (1, 0.0132),
+            (1, 0.0152),
+            (1, 0.0192),
+            (1, 0.0451),
+            (-1, 0.0451),
+            (-1, 0.0192),
+            (-1, 0.0152),
+            (-1, 0.0132),
+            (-1, 0.012),
+            (-1, 0.0112),
+            (-1, 0.0107),
+            (-1, 0.0103),
+            (-1, 0.0101),
+            (-1, 0.01),
+            (-1, 0.01),
+            (-1, 0.0101),
+            (-1, 0.0103),
+            (-1, 0.0107),
+            (-1, 0.0112),
+            (-1, 0.012),
+            (-1, 0.0132),
+            (-1, 0.0152),
+            (-1, 0.0192),
+            (-1, 0.0451)
         ]
         y = [
-            1, 1, 1, 1, 1, 0, 0,
-            0, 0, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, 0, 0,
-            0, 0, 1, 1, 1, 1, 1
+            (1, 0.01),
+            (1, 0.0101),
+            (1, 0.0103),
+            (1, 0.0107),
+            (1, 0.0112),
+            (1, 0.012),
+            (1, 0.0132),
+            (1, 0.0152),
+            (1, 0.0192),
+            (1, 0.0451),
+            (-1, 0.0451),
+            (-1, 0.0192),
+            (-1, 0.0152),
+            (-1, 0.0132),
+            (-1, 0.012),
+            (-1, 0.0112),
+            (-1, 0.0107),
+            (-1, 0.0103),
+            (-1, 0.0101),
+            (-1, 0.01),
+            (-1, 0.01),
+            (-1, 0.0101),
+            (-1, 0.0103),
+            (-1, 0.0107),
+            (-1, 0.0112),
+            (-1, 0.012),
+            (-1, 0.0132),
+            (-1, 0.0152),
+            (-1, 0.0192),
+            (-1, 0.0451),
+            (1, 0.0451),
+            (1, 0.0192),
+            (1, 0.0152),
+            (1, 0.0132),
+            (1, 0.012),
+            (1, 0.0112),
+            (1, 0.0107),
+            (1, 0.0103),
+            (1, 0.0101),
+            (1, 0.01)
         ]
-        self.assertEqual(_plan_interpolated_circle_midpoint(5), (x, y))
 
-    def test_interpolated_circle_constant(self):
-        x = [(1, 0.005)] * 20
-        y = []
-        self.assertEqual(_plan_interpolated_circle_constant(10, 200), (x, y))
+        ix, iy = _plan_interpolated_arc(10, 0, 0, 100.0, 100.0, True)
+        for i in range(len(ix)):
+            ix[i] = (ix[i][0], round(ix[i][1], 4))
+            iy[i] = (iy[i][0], round(iy[i][1], 4))
+        self.assertEqual(
+            (ix, iy), (x, y))
 
 
 if __name__ == "__main__":

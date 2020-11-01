@@ -13,6 +13,12 @@ import time
 import config as cfg
 
 
+def _busy_wait(dt):
+    current_time = time.time()
+    while (time.time() < current_time+dt):
+        pass
+
+
 def _configure_ramp_trapezoidal(vm, mode, step_angle, lead, accel):
     pi = math.pi
     sqrt = math.sqrt
@@ -307,14 +313,14 @@ class Stepper(object):
             self.configure_ramp_sigmoidal(speed)
 
         self.speed = speed
-        self.step_delay = _convert_mm_per_min_to_pulse(
-            speed, self.lead, self.step_angle, self.mode)
+        # self.step_delay = _convert_mm_per_min_to_pulse(
+        #    speed, self.lead, self.step_angle, self.mode)
 
     def step(self, interval):
         gpio_step = self.gpios["step"]
-        masked_interval = _add_ramp(interval, self.ramp, self.step_delay)
+        #masked_interval = _add_ramp(interval, self.ramp, self.step_delay)
 
-        for i, delay in masked_interval:
+        for i, dt in interval:
             if i == -1:
                 self.set_direction("CCW")
             else:
@@ -322,7 +328,8 @@ class Stepper(object):
             for ele in (True, False):
                 if i:
                     GPIO.output(gpio_step, ele)
-                time.sleep(delay)
+                # time.sleep(delay)
+                _busy_wait(dt)
 
 
 def main():

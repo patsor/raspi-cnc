@@ -68,68 +68,10 @@ def _plan_interpolated_line_constant(x, y, vx, vy):
 
     ix = [(sign_x, 1 / vx)] * abs(x)
     iy = [(sign_y, 1 / vy)] * abs(y)
+    tx = 1 / vx * abs(x)
+    ty = 1 / vy * abs(y)
 
     return ix, iy
-
-
-def _plan_interpolated_circle_midpoint(r):
-    step_intervals_x = []
-    step_intervals_y = []
-
-    points = []
-    p1 = []
-    p2 = []
-    p3 = []
-    p4 = []
-    p5 = []
-    p6 = []
-    p7 = []
-    p8 = []
-
-    # Calculate first octant (x,y) using Bresenham algorithm
-
-    px = r
-    py = 0
-
-    p = 1 - r
-
-    while px > py:
-        p1.append((-px, py))
-        p2.append((-py, px))
-        p3.append((py, px))
-        p4.append((px, py))
-        p5.append((px, -py))
-        p6.append((py, -px))
-        p7.append((-py, -px))
-        p8.append((-px, -py))
-
-        py += 1
-
-        if p <= 0:
-            p += 2 * py + 1
-        else:
-            px -= 1
-            p += 2 * py - 2 * px + 1
-
-    points.extend(p1)
-    points.extend(p2[::-1])
-    points.extend(p3)
-    points.extend(p4[::-1])
-    points.extend(p5)
-    points.extend(p6[::-1])
-    points.extend(p7)
-    points.extend(p8[::-1])
-
-    last_x = points[0][0]
-    last_y = points[0][1]
-    for x, y in points:
-        if x != last_x or y != last_y:
-            step_intervals_x.append(x - last_x)
-            step_intervals_y.append(y - last_y)
-        last_x = x
-        last_y = y
-
-    return step_intervals_x, step_intervals_y
 
 
 def _plan_interpolated_circle_bresenham(r):
@@ -191,26 +133,63 @@ def _plan_interpolated_circle_bresenham(r):
     return ix, iy
 
 
-def _plan_interpolated_circle_constant(r, vx):
+def _plan_interpolated_arc(r, to_x, to_y, vx, vy, cw=True):
     ix = []
     iy = []
-    y_last = 0
-    for x in range(1, (r * 2) + 1):
-        y = math.sqrt(r**2 - (x - r)**2)
-        vy = (y - y_last) * vx
-        sign_y = 1 if vy >= 1 else -1
-        y_last = y
-        ix.append((1, 1 / vx))
-        iy.append((sign_y, abs(1 / vy)))
-        print(x, y, abs(1 / vy))
 
-    neg_ix = [(-x, c) for x, c in ix]
-    neg_iy = [(-y, c) for y, c in iy]
+    phi_x0 = 0
+    phi_y0 = 0
+    phi_x = 0
+    phi_y = 0
+    x = 0
+    y = 0
+    kx = 0
+    ky = 0
+    r_2 = 2 * r
+    r_3 = 3 * r
+    r_4 = 4 * r    # also total number of steps
+    pi = math.pi
+    acos = math.acos
+    asin = math.asin
+    r_vx = r / vx
+    r_vy = r / vy
+    for i in range(r_4):
+        if 0 <= i < r:
+            kx = 0
+            ky = 0
+            factor_x = 1
+            factor_y = 1
+        elif r <= i < r_2:
+            kx = 0
+            ky = 1
+            factor_x = 1
+            factor_y = -1
+        elif r_2 <= i < r_3:
+            kx = 1
+            ky = 1
+            factor_x = -1
+            factor_y = -1
+        elif r_3 <= i < r_4:
+            kx = 1
+            ky = 2
+            factor_x = -1
+            factor_y = 1
 
-    ix.extend(neg_ix)
-    iy.extend(neg_iy)
-    print(ix)
-    print(iy)
+        x += factor_x
+        y += factor_y
+        phi_x = factor_x * acos(float(-x+r)/r) + pi * 2 * kx
+        phi_y = factor_y * asin(float(y)/r) + pi * ky
+        dtx = r_vx * (phi_x - phi_x0)
+        dty = r_vy * (phi_y - phi_y0)
+        phi_x0 = phi_x
+        phi_y0 = phi_y
+        ix.append((factor_x, dtx))
+        iy.append((factor_y, dty))
+
+        if to_x or to_y:
+            if (x == to_x and y == to_y):
+                break
+
     return ix, iy
 
 
@@ -238,9 +217,9 @@ class MotionPlanner(object):
         ayl = self.ay["lead"]
         azl = self.az["lead"]
 
-        axv = self.ax["traversal_speed"]
-        ayv = self.ay["traversal_speed"]
-        azv = self.az["traversal_speed"]
+        axv = self.ax["traversal_rate"]
+        ayv = self.ay["traversal_rate"]
+        azv = self.az["traversal_rate"]
 
         steps_x = _mm_to_steps(x, sxa, sxm, axl)
         steps_y = _mm_to_steps(y, sya, sym, ayl)
@@ -268,27 +247,28 @@ class MotionPlanner(object):
         steps_z = _mm_to_steps(z, sza, szm, azl)
 
         if plane == "XY":
-            xy = math.sqrt(abs(x)**2, abs(y)**2)
+            xy = math.sqrt(abs(x)**2 + abs(y)**2)
             ti = xy / feed_rate
-            pps_x = _mm_per_min_to_pps(ti / x, sxa, sxm, axl)
-            pps_y = _mm_per_min_to_pps(ti / y, sxa, sxm, axl)
+            pps_x = _mm_per_min_to_pps(abs(x) / ti, sxa, sxm, axl)
+            pps_y = _mm_per_min_to_pps(abs(y) / ti, sxa, sxm, axl)
+            print(pps_x, pps_y)
             return _plan_interpolated_line_constant(steps_x, steps_y, pps_x, pps_y)
         elif plane == "XZ":
-            xz = math.sqrt(abs(x)**2, abs(z)**2)
+            xz = math.sqrt(abs(x)**2 + abs(z)**2)
             ti = xz / feed_rate
-            pps_x = _mm_per_min_to_pps(ti / x, sxa, sxm, axl)
-            pps_z = _mm_per_min_to_pps(ti / z, sza, szm, azl)
+            pps_x = _mm_per_min_to_pps(abs(x) / ti, sxa, sxm, axl)
+            pps_z = _mm_per_min_to_pps(abs(z) / ti, sza, szm, azl)
             return _plan_interpolated_line_constant(steps_x, steps_z, pps_x, pps_z)
         elif plane == "YZ":
-            yz = math.sqrt(abs(y)**2, abs(z)**2)
+            yz = math.sqrt(abs(y)**2 + abs(z)**2)
             ti = yz / feed_rate
-            pps_y = _mm_per_min_to_pps(ti / y, sya, sym, ayl)
-            pps_z = _mm_per_min_to_pps(ti / z, sza, szm, azl)
+            pps_y = _mm_per_min_to_pps(abs(y) / ti, sya, sym, ayl)
+            pps_z = _mm_per_min_to_pps(abs(z) / ti, sza, szm, azl)
             return _plan_interpolated_line_constant(steps_y, steps_z, pps_y, pps_z)
         else:
             return None
 
-    def plan_interpolated_circle(self, r, plane="XY"):
+    def plan_interpolated_arc(self, r, x, y, feed_rate, cw, plane="XY"):
         sxa = self.sx.step_angle
         sya = self.sy.step_angle
         sza = self.sz.step_angle
@@ -297,10 +277,28 @@ class MotionPlanner(object):
         sym = self.sy.mode
         szm = self.sz.mode
 
+        axl = self.ax["lead"]
+        ayl = self.ay["lead"]
+        azl = self.az["lead"]
+
         steps_r = _mm_to_steps(r, sxa, sxm, axl)
+        steps_x = _mm_to_steps(x, sxa, sxm, axl)
+        steps_y = _mm_to_steps(y, sya, sym, ayl)
+        #steps_z = _mm_to_steps(z, sza, szm, azl)
 
         if plane == "XY":
-            return _plan_interpolated_circle_midnight(steps_r)
+            pps_x = _mm_per_min_to_pps(feed_rate, sxa, sxm, axl)
+            pps_y = _mm_per_min_to_pps(feed_rate, sya, sym, ayl)
+            print(steps_r, pps_x, pps_y)
+            return _plan_interpolated_arc(steps_r, steps_x, steps_y, pps_x, pps_y, cw)
+        elif plane == "XZ":
+            pps_x = _mm_per_min_to_pps(feed_rate, sxa, sxm, axl)
+            pps_z = _mm_per_min_to_pps(feed_rate, sza, szm, azl)
+            return _plan_interpolated_arc(steps_r, steps_x, steps_y, pps_x, pps_z, cw)
+        elif plane == "YZ":
+            pps_y = _mm_per_min_to_pps(feed_rate, sya, sym, ayl)
+            pps_z = _mm_per_min_to_pps(feed_rate, sza, szm, azl)
+            return _plan_interpolated_arc(steps_r, steps_x, steps_y, pps_y, pps_z, cw)
         else:
             return None
 
@@ -310,5 +308,5 @@ def main():
     mp._plan_interpolated_circle(5)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
