@@ -9,11 +9,15 @@ supported_gcodes = {
     "00": "Rapid positioning",
     "01": "Linear interpolation",
     "02": "Circular interpolation, clockwise",
+    "17": "XY plane selection",
+    "18": "XZ plane selection",
+    "19": "YZ plane selection",
     "28": "Return to home position",
 }
 
 
 def is_number(s):
+    """Checks if a string is a number."""
     try:
         float(s)
         return True
@@ -25,6 +29,7 @@ class GCodeParser(object):
 
     @ staticmethod
     def read_lines(gcode_file):
+        """Parses gcode file and creates gcode list."""
         gcode_list = []
         with open(gcode_file) as inf:
             for line in inf:
@@ -36,6 +41,7 @@ class GCodeParser(object):
 
     @ staticmethod
     def parse_line(line):
+        """Parses one line from gcode file."""
         line = line.strip()
         params = {}
         if not line:
@@ -90,10 +96,13 @@ class GCodeParser(object):
             elif params["G"] == "02":
                 if not "R" in params:
                     raise InvalidGCodeError(line, "Missing R parameter")
+            elif params["G"] in ("17", "18", "19"):
                 if any(key in params for key in ("X", "Y", "Z")):
-                    raise InvalidGCodeError(line, "Only R parameter allowed")
+                    raise InvalidGCodeError(
+                        line, "XYZ not allowed during plane selection")
             elif params["G"] == "28":
                 if any(key in params for key in ("X", "Y", "Z")):
                     raise InvalidGCodeError(
-                        line, "XYZ during homing not allowed")
+                        line, "XYZ not allowed during homing")
+
         return params

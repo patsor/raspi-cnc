@@ -1,3 +1,4 @@
 router.log
 __pycache__/
 .vscode
+deprecated.py

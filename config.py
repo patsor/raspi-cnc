@@ -6,6 +6,28 @@ module_dir = os.path.dirname(os.path.realpath(__file__))
 coord_file = os.path.join(module_dir, "coord.json")
 logfile = os.path.join(module_dir, "logs", "main.log")
 
+
+# Constants
+STEPPER_X_STEP_ANGLE = 1.8
+STEPPER_Y_STEP_ANGLE = 1.8
+STEPPER_Z_STEP_ANGLE = 1.8
+
+AXIS_LEAD_X = 5
+AXIS_LEAD_Y = 5
+AXIS_LEAD_Z = 5
+
+AXIS_TRAVERSAL_MM_PER_MIN_X = 3750.0
+AXIS_TRAVERSAL_MM_PER_MIN_Y = 3750.0
+AXIS_TRAVERSAL_MM_PER_MIN_Z = 3750.0
+
+AXIS_FEED_MM_PER_MIN_X = 1200.0
+AXIS_FEED_MM_PER_MIN_Y = 1200.0
+AXIS_FEED_MM_PER_MIN_Z = 1200.0
+
+AXIS_LIMITS_X = (0.0, 800.0)
+AXIS_LIMITS_Y = (0.0, 600.0)
+AXIS_LIMITS_Z = (0.0, 100.0)
+
 steppers = {
     "default": {
         "driver": "DRV8825",
