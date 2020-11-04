@@ -8,14 +8,21 @@ logfile = os.path.join(module_dir, "logs", "main.log")
 
 
 # Constants
-STEPPER_X_STEP_ANGLE = 1.8
-STEPPER_Y_STEP_ANGLE = 1.8
-STEPPER_Z_STEP_ANGLE = 1.8
+# Define step angle for each stepper
+STEPPER_STEP_ANGLE_X = 1.8
+STEPPER_STEP_ANGLE_Y = 1.8
+STEPPER_STEP_ANGLE_Z = 1.8
+
+# Define stepper modes
+STEPPER_MODE_X = 2
+STEPPER_MODE_Y = 2
+STEPPER_MODE_Z = 8
 
 AXIS_LEAD_X = 5
 AXIS_LEAD_Y = 5
 AXIS_LEAD_Z = 5
 
+# Define axis speeds in mm/min
 AXIS_TRAVERSAL_MM_PER_MIN_X = 3750.0
 AXIS_TRAVERSAL_MM_PER_MIN_Y = 3750.0
 AXIS_TRAVERSAL_MM_PER_MIN_Z = 3750.0
@@ -24,16 +31,30 @@ AXIS_FEED_MM_PER_MIN_X = 1200.0
 AXIS_FEED_MM_PER_MIN_Y = 1200.0
 AXIS_FEED_MM_PER_MIN_Z = 1200.0
 
+# Define axis limits
 AXIS_LIMITS_X = (0.0, 800.0)
 AXIS_LIMITS_Y = (0.0, 600.0)
 AXIS_LIMITS_Z = (0.0, 100.0)
 
+# Define inverted axes
+AXIS_POLARITY_X = False
+AXIS_POLARITY_Y = False
+AXIS_POLARITY_Z = True
+
+# Define axis acceleration in mm/s^2 and ramp type
+AXIS_ACCELERATION_X = 80.0
+AXIS_ACCELERATION_Y = 80.0
+AXIS_ACCELERATION_Z = 80.0
+
+AXIS_RAMP_TYPE_X = "sigmoidal"
+AXIS_RAMP_TYPE_Y = "sigmoidal"
+AXIS_RAMP_TYPE_Z = "sigmoidal"
+
+
 steppers = {
     "default": {
         "driver": "DRV8825",
-        "mode": 2,
         "direction": "CW",
-        "step_angle": 1.8,
         "gpios": {
             "dir": 16,       # DIR
             "step": 18,      # STEP
@@ -45,9 +66,7 @@ steppers = {
     },
     "X": {
         "driver": "DRV8825",
-        "mode": 2,
         "direction": "CW",
-        "step_angle": 1.8,
         "gpios": {
             "dir": 16,       # DIR
             "step": 18,      # STEP
@@ -59,9 +78,7 @@ steppers = {
     },
     "Y": {
         "driver": "DRV8825",
-        "mode": 2,
         "direction": "CW",
-        "step_angle": 1.8,
         "gpios": {
             "dir": 8,       # DIR
             "step": 10,     # STEP
@@ -73,9 +90,7 @@ steppers = {
     },
     "Z": {
         "driver": "DRV8825",
-        "mode": 2,
         "direction": "CW",
-        "step_angle": 1.8,
         "gpios": {
             "dir": 38,       # DIR
             "step": 40,      # STEP
@@ -129,44 +144,5 @@ drivers = {
             128: (0, 1, 1, 1),
             256: (1, 0, 0, 0),
         },
-    }
-}
-
-axes = {
-    "X": {
-        "traversal_rate": 3750.0,     # in mm/min
-        "feed_rate": 2000.0,  # in mm/min
-        "limits": [
-            0.0,
-            800.0
-        ],
-        "polarity": False,
-        "lead": 5,     # in mm
-        "ramp_type": "sigmoidal",
-        "accel": 80.0   # in mm/s^2
-    },
-    "Y": {
-        "traversal_rate": 3750.0,     # in mm/min
-        "feed_rate": 2000.0,  # in mm/min
-        "limits": [
-            0.0,
-            600.0
-        ],
-        "polarity": False,
-        "lead": 5,     # in mm
-        "ramp_type": "sigmoidal",
-        "accel": 80.0   # in mm/s^2
-    },
-    "Z": {
-        "traversal_rate": 3750.0,     # in mm/min
-        "feed_rate": 2000.0,  # in mm/min
-        "limits": [
-            0.0,
-            100.0
-        ],
-        "polarity": True,
-        "lead": 5,     # in mm
-        "ramp_type": "sigmoidal",
-        "accel": 80.0   # in mm/s^2
     }
 }

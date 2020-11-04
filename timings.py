@@ -16,7 +16,7 @@ def main():
     )
 
     t2 = timeit.repeat(
-        "_plan_interpolated_arc(400, 0, 0, 100, 100)",
+        "_plan_interpolated_arc(400, 0, 0, 0, 0, 100, 100)",
         setup="from motion_planner import _plan_interpolated_arc",
         repeat=r,
         number=n

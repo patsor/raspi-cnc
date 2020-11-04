@@ -19,7 +19,7 @@ class Machine(object):
 
         self._debug = debug
 
-        self.mp = MotionPlanner(self._sx, self._sy, self._sz)
+        self.mp = MotionPlanner()
 
         self._coordinates = self._load_coordinates()
 
@@ -40,18 +40,8 @@ class Machine(object):
             gcode (GCode): GCode object
         """
 
-        # Get values from GCode
-        f = gcode.get("F")
+        # Get gcode command
         g = gcode.get("G")
-        r = gcode.get("R")
-        x = gcode.get("X")
-        y = gcode.get("Y")
-        z = gcode.get("Z")
-
-        # Calculate axis deltas
-        dx = x - self._coordinates["X"] if x else 0
-        dy = y - self._coordinates["Y"] if y else 0
-        dz = z - self._coordinates["Z"] if z else 0
 
         # Init step intervals for X, Y and Z
         ix = []
@@ -61,39 +51,86 @@ class Machine(object):
         # Do action depending on GCode
         # Rapid positioning
         if g == "00":
-            ix, iy, iz = self.mp.plan_move(dx, dy, dz)
+            x = gcode.get("X")
+            y = gcode.get("Y")
+            z = gcode.get("Z")
+            # Calculate axis deltas
+            dx = x - self._coordinates["X"] if x else 0
+            dy = y - self._coordinates["Y"] if y else 0
+            dz = z - self._coordinates["Z"] if z else 0
+            vx = cfg.AXIS_TRAVERSAL_MM_PER_MIN_X
+            vy = cfg.AXIS_TRAVERSAL_MM_PER_MIN_Y
+            vz = cfg.AXIS_TRAVERSAL_MM_PER_MIN_Z
+            ds = (("x", dx), ("y", dy), ("z", dz))
+            v = (("x", vx), ("y", vy), ("z", vz))
+            ix, iy, iz = self.mp.plan_move(delta, v)
 
         # Linear interpolation
         elif g == "01":
+            f = gcode.get("F")
+            x = gcode.get("X")
+            y = gcode.get("Y")
+            z = gcode.get("Z")
+            # Calculate axis deltas
+            dx = x - self._coordinates["X"] if x else 0
+            dy = y - self._coordinates["Y"] if y else 0
+            dz = z - self._coordinates["Z"] if z else 0
             feed_rate = float(f) if f else cfg.AXIS_FEED_MM_PER_MIN_X
 
             if x and y and not z:
-                ix, iy = self.mp.plan_interpolated_line(
-                    dx, dy, dz, feed_rate, "XY")
+                delta = (("x", dx), ("y", dy))
+                ix, iy = self.mp.plan_interpolated_line(delta, feed_rate)
             elif x and not y and z:
-                ix, iz = self.mp.plan_interpolated_line(
-                    dx, dy, dz, feed_rate, "XZ")
+                delta = (("x", dx), ("z", dz))
+                ix, iz = self.mp.plan_interpolated_line(delta, feed_rate)
             elif not x and y and z:
-                iy, iz = self.mp.plan_interpolated_line(
-                    dx, dy, dz, feed_rate, "YZ")
+                delta = (("y", dy), ("z", dz))
+                iy, iz = self.mp.plan_interpolated_line(delta, feed_rate)
             else:
                 print("Error in GCode! 3D linear interpolation not yet implemented")
 
         # Circular interpolation
         elif g in ("02", "03"):
+            f = gcode.get("F")
+            i = gcode.get("I")
+            j = gcode.get("J")
+            k = gcode.get("K")
+            r = gcode.get("R")
+            x = gcode.get("X")
+            y = gcode.get("Y")
+            z = gcode.get("Z")
+            # Calculate axis deltas
+            dx = x - self._coordinates["X"] if x else 0
+            dy = y - self._coordinates["Y"] if y else 0
+            dz = z - self._coordinates["Z"] if z else 0
+
             cw = True if g == "02" else False
             feed_rate = float(f) if f else cfg.AXIS_FEED_MM_PER_MIN_X
             if self._plane == "XY":
+                xs = -i if i else 0
+                ys = -j if j else 0
+                if not r:
+                    r = math.sqrt(xs*xs + ys*ys)
+                ds = (("x", xs), ("y", ys))
+                de = (("x", dx), ("y", dy))
                 ix, iy = self.mp.plan_interpolated_arc(
-                    r, dx, dy, feed_rate, cw, self._plane
+                    r, ds, de, feed_rate, cw
                 )
             elif self._plane == "XZ":
+                if i and k and not r:
+                    r = math.sqrt(i*i + k*k)
+                    x_start = -i
+                    z_start = -k
                 ix, iz = self.mp.plan_interpolated_arc(
-                    r, dx, dz, feed_rate, cw, self._plane
+                    r, x_start, z_start, dx, dz, feed_rate, cw
                 )
             elif self._plane == "YZ":
+                if j and k and not r:
+                    r = math.sqrt(j*j + k*k)
+                    y_start = -j
+                    z_start = -k
                 iy, iz = self.mp.plan_interpolated_arc(
-                    r, dy, dz, feed_rate, cw, self._plane
+                    r, y_start, z_start, dy, dz, feed_rate, cw
                 )
             else:
                 print("Error in GCode! 3D circular interpolation not yet implemented")
@@ -116,7 +153,12 @@ class Machine(object):
             dx = cfg.AXIS_LIMITS_X[0] - self._coordinates["X"]
             dy = cfg.AXIS_LIMITS_Y[0] - self._coordinates["Y"]
             dz = cfg.AXIS_LIMITS_Z[0] - self._coordinates["Z"]
-            ix, iy, iz = self.mp.plan_move(dx, dy, dz)
+            vx = cfg.AXIS_TRAVERSAL_MM_PER_MIN_X
+            vy = cfg.AXIS_TRAVERSAL_MM_PER_MIN_Y
+            vz = cfg.AXIS_TRAVERSAL_MM_PER_MIN_Z
+            ds = (("x", dx), ("y", dy), ("z", dz))
+            v = (("x", vx), ("y", vy), ("z", vz))
+            ix, iy, iz = self.mp.plan_move(ds, v)
 
         if not self._debug:
             # Creating a process for each motor handling step intervals

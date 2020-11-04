@@ -297,7 +297,7 @@ class TestMotionPlanner(unittest.TestCase):
             (1, 0.01)
         ]
 
-        ix, iy = _plan_interpolated_arc(10, 0, 0, 100.0, 100.0, True)
+        ix, iy = _plan_interpolated_arc(10, 0, 0, 0, 0, 100.0, 100.0, True)
         for i in range(len(ix)):
             ix[i] = (ix[i][0], round(ix[i][1], 4))
             iy[i] = (iy[i][0], round(iy[i][1], 4))
@@ -319,7 +319,7 @@ class TestMotionPlanner(unittest.TestCase):
             (1, 0.0107),
             (1, 0.0112)
         ]
-        ix, iy = _plan_interpolated_arc(10, 5, 5, 100.0, 100.0, True)
+        ix, iy = _plan_interpolated_arc(10, 0, 0, 5, 5, 100.0, 100.0, True)
         for i in range(len(ix)):
             ix[i] = (ix[i][0], round(ix[i][1], 4))
             iy[i] = (iy[i][0], round(iy[i][1], 4))
@@ -364,7 +364,7 @@ class TestMotionPlanner(unittest.TestCase):
             (-1, 0.012)
         ]
 
-        ix, iy = _plan_interpolated_arc(10, 15, 5, 100.0, 100.0, True)
+        ix, iy = _plan_interpolated_arc(10, 0, 0, 15, 5, 100.0, 100.0, True)
         for i in range(len(ix)):
             ix[i] = (ix[i][0], round(ix[i][1], 4))
             iy[i] = (iy[i][0], round(iy[i][1], 4))
@@ -428,7 +428,7 @@ class TestMotionPlanner(unittest.TestCase):
             (-1, 0.0112)
         ]
 
-        ix, iy = _plan_interpolated_arc(10, 15, -5, 100.0, 100.0, True)
+        ix, iy = _plan_interpolated_arc(10, 0, 0, 15, -5, 100.0, 100.0, True)
         for i in range(len(ix)):
             ix[i] = (ix[i][0], round(ix[i][1], 4))
             iy[i] = (iy[i][0], round(iy[i][1], 4))
@@ -513,9 +513,41 @@ class TestMotionPlanner(unittest.TestCase):
             (1, 0.012)
         ]
 
-        ix, iy = _plan_interpolated_arc(10, 5, -5, 100.0, 100.0, True)
+        ix, iy = _plan_interpolated_arc(10, 0, 0, 5, -5, 100.0, 100.0, True)
         for i in range(len(ix)):
             ix[i] = (ix[i][0], round(ix[i][1], 4))
+            iy[i] = (iy[i][0], round(iy[i][1], 4))
+        self.assertEqual(
+            (ix, iy), (x, y))
+
+    def test_interpolated_arc_cw_q4_start(self):
+
+        x = [
+            (-1, 0.0164),
+            (-1, 0.0379),
+            (1, 0.0379),
+            (1, 0.0164),
+            (1, 0.0131),
+            (1, 0.0116),
+            (1, 0.0107)
+        ]
+        y = [
+            (1, 0.0131),
+            (1, 0.0116),
+            (1, 0.0107),
+            (1, 0.0102),
+            (1, 0.0100),
+            (1, 0.0100),
+            (1, 0.0102),
+            (1, 0.0107),
+            (1, 0.0116),
+            (1, 0.0131)
+        ]
+
+        ix, iy = _plan_interpolated_arc(7, 2, -5, 5, 5, 100.0, 100.0, True)
+        for i in range(len(ix)):
+            ix[i] = (ix[i][0], round(ix[i][1], 4))
+        for i in range(len(iy)):
             iy[i] = (iy[i][0], round(iy[i][1], 4))
         self.assertEqual(
             (ix, iy), (x, y))
@@ -606,9 +638,63 @@ class TestMotionPlanner(unittest.TestCase):
             (-1, 0.01)
         ]
 
-        ix, iy = _plan_interpolated_arc(10, 0, 0, 100.0, 100.0, False)
+        ix, iy = _plan_interpolated_arc(10, 0, 0, 0, 0, 100.0, 100.0, False)
         for i in range(len(ix)):
             ix[i] = (ix[i][0], round(ix[i][1], 4))
+            iy[i] = (iy[i][0], round(iy[i][1], 4))
+        self.assertEqual(
+            (ix, iy), (x, y))
+
+    def test_interpolated_arc_ccw_q4_start(self):
+
+        x = [
+            (1, 0.0131),
+            (1, 0.0116),
+            (1, 0.0107),
+            (1, 0.0102),
+            (1, 0.01),
+            (1, 0.01),
+            (1, 0.0102),
+            (1, 0.0107),
+            (1, 0.0116),
+            (1, 0.0131),
+            (1, 0.0164),
+            (1, 0.0379),
+            (-1, 0.0379),
+            (-1, 0.0164),
+            (-1, 0.0131),
+            (-1, 0.0116),
+            (-1, 0.0107),
+            (-1, 0.0102),
+            (-1, 0.01),
+            (-1, 0.01),
+            (-1, 0.0102)
+        ]
+        y = [
+            (-1, 0.0164),
+            (-1, 0.0379),
+            (1, 0.0379),
+            (1, 0.0164),
+            (1, 0.0131),
+            (1, 0.0116),
+            (1, 0.0107),
+            (1, 0.0102),
+            (1, 0.01),
+            (1, 0.01),
+            (1, 0.0102),
+            (1, 0.0107),
+            (1, 0.0116),
+            (1, 0.0131),
+            (1, 0.0164),
+            (1, 0.0379),
+            (-1, 0.0379),
+            (-1, 0.0164)
+        ]
+
+        ix, iy = _plan_interpolated_arc(7, 2, -5, 5, 5, 100.0, 100.0, False)
+        for i in range(len(ix)):
+            ix[i] = (ix[i][0], round(ix[i][1], 4))
+        for i in range(len(iy)):
             iy[i] = (iy[i][0], round(iy[i][1], 4))
         self.assertEqual(
             (ix, iy), (x, y))

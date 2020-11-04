@@ -66,8 +66,14 @@ class GCodeParser(object):
                 raise InvalidGCodeError(line, "Invalid parameter value")
 
             # Check if X, Y, Z parameters fall in axis range
-            if key in ("X", "Y", "Z"):
-                limits = cfg.axes[key]["limits"]
+            if key in ("XYZ"):
+                limits = None
+                if key == "X":
+                    limits = cfg.AXIS_LIMITS_X
+                elif key == "Y":
+                    limits = cfg.AXIS_LIMITS_Y
+                elif key == "Z":
+                    limits = cfg.AXIS_LIMITS_Z
                 if float(val) < limits[0] or float(val) > limits[1]:
                     raise GCodeOutOfBoundsError(
                         line, "GCode out of bounds")

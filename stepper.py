@@ -25,21 +25,15 @@ class Stepper(object):
     A class for stepper motor methods.
     """
 
-    def __init__(self, name, debug=False):
+    def __init__(self, name, mode, debug=False):
         stepper_cfg = cfg.steppers[name]
         self._name = name
         self._driver = stepper_cfg["driver"]
-        self._mode = stepper_cfg["mode"]
+        self._mode = mode
         self._direction = stepper_cfg["direction"]
-        self._step_angle = stepper_cfg["step_angle"]
         self._gpios = stepper_cfg["gpios"]
 
-        axis_cfg = cfg.axes[name]
-        self._lead = axis_cfg["lead"]
-        self._ramp_type = axis_cfg["ramp_type"]
-        self._accel = axis_cfg["accel"]
-
-        self._logger = logging.getLogger(self.name)
+        self._logger = logging.getLogger(self._name)
         self._debug = debug
 
         if self._driver in cfg.drivers:
@@ -156,7 +150,7 @@ def main():
         s.set_direction(args.direction)
 
     interval = [
-        1 if args.direction == "CW" else -1 for step in range(args.steps)
+        (1, 0.05) if args.direction == "CW" else (-1, 0.05) for step in range(args.steps)
     ]
 
     s.step(interval)

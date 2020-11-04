@@ -23,9 +23,9 @@ class Router(object):
 
     def run(self, gcode_file):
         """Runs GCode from GCode file."""
-        sx = Stepper("X", self.debug)
-        sy = Stepper("Y", self.debug)
-        sz = Stepper("Z", self.debug)
+        sx = Stepper("X", cfg.STEPPER_MODE_X, self.debug)
+        sy = Stepper("Y", cfg.STEPPER_MODE_Y, self.debug)
+        sz = Stepper("Z", cfg.STEPPER_MODE_Z, self.debug)
         sx.enable()
         sy.enable()
         sz.enable()

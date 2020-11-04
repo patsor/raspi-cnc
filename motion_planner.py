@@ -8,16 +8,34 @@ import config as cfg
 
 
 def _mm_to_steps(value, step_angle, mode, lead):
-    """Converts distance in millimeters to steps 
+    """Converts distance in millimeters to steps
     based on motor step angle, mode and lead of axis.
     """
     return int(round(value * mode * 360.0 / step_angle / lead))
 
 
+def _mm_to_steps_ax(key, value):
+    if key == "x":
+        return _mm_to_steps(value, cfg.STEPPER_STEP_ANGLE_X, cfg.STEPPER_MODE_X, cfg.AXIS_LEAD_X)
+    elif key == "y":
+        return _mm_to_steps(value, cfg.STEPPER_STEP_ANGLE_Y, cfg.STEPPER_MODE_Y, cfg.AXIS_LEAD_Y)
+    elif key == "z":
+        return _mm_to_steps(value, cfg.STEPPER_STEP_ANGLE_Z, cfg.STEPPER_MODE_Z, cfg.AXIS_LEAD_Z)
+
+
 def _mm_per_min_to_pps(value, step_angle, mode, lead):
-    """Converts velocity in millimeters per minute to steps 
+    """Converts velocity in millimeters per minute to steps
     based on motor step angle, mode and lead of axis."""
     return value / lead / 60 * mode * 360 / step_angle
+
+
+def _mm_per_min_to_pps_ax(key, value):
+    if key == "x":
+        return _mm_per_min_to_pps(value, cfg.STEPPER_STEP_ANGLE_X, cfg.STEPPER_MODE_X, cfg.AXIS_LEAD_X)
+    elif key == "y":
+        return _mm_per_min_to_pps(value, cfg.STEPPER_STEP_ANGLE_Y, cfg.STEPPER_MODE_Y, cfg.AXIS_LEAD_Y)
+    elif key == "z":
+        return _mm_per_min_to_pps(value, cfg.STEPPER_STEP_ANGLE_Z, cfg.STEPPER_MODE_Z, cfg.AXIS_LEAD_Z)
 
 
 def _configure_ramp_trapezoidal(vm, mode, step_angle, lead, accel):
@@ -270,17 +288,19 @@ def _plan_interpolated_line(x, y, vx, vy):
     return ix, iy
 
 
-def _plan_interpolated_arc(r, to_x, to_y, vx, vy, is_cw=True):
+def _plan_interpolated_arc(r, x_start, y_start, x_end, y_end, vx, vy, is_cw=True):
     """Generates pulses for circular interpolation movement.
     Returns tuples vector with pulse direction(1 | -1) and
     pulse duration for the motor.
 
     Parameters:
         r (int): radius in steps
-        to_x (int): X axis end point in steps
-        to_y (int): Y axis end point in steps
-        vx (float): X axis velocity in [1/s]
-        vy (float): Y axis velocity in [1/s]
+        x_start (int): First axis starting point in steps
+        y_start (int): Second axis starting point in steps
+        x_end (int): First axis end point in steps
+        y_end (int): Second axis end point in steps
+        vx (float): First axis velocity in [1/s]
+        vy (float): Second axis velocity in [1/s]
         is_cw (bool): Is direction clockwise
 
     Returns:
@@ -291,15 +311,25 @@ def _plan_interpolated_arc(r, to_x, to_y, vx, vy, is_cw=True):
     ix = []
     iy = []
 
-    phi_x0 = 0
-    phi_y0 = 0
     phi_x = 0
     phi_y = 0
-    x = 0
-    y = 0
+
+    x = x_start
+    y = y_start
+    phi_x0 = 0
+    phi_y0 = 0
+
     kx = 0
     ky = 0
-
+    factor_x = 1
+    factor_y = 1
+    # print("Start")
+    #print(r, x_start, y_start, x_end, y_end, is_cw)
+    inv_factor = 1
+    if not is_cw:
+        inv_factor = -1
+    else:
+        inv_factor = 1
     # Precompute some values before loop to improve efficiency
     n = 4 * r    # total number of steps
     pi = math.pi
@@ -310,57 +340,94 @@ def _plan_interpolated_arc(r, to_x, to_y, vx, vy, is_cw=True):
     asin = math.asin
     r_vx = r / vx
     r_vy = r / vy
+    initial = True
     for i in range(n):
         # first quadrant (0 <= phi < pi/2)
-        if 0 <= phi_x < pi_1_2:
+        # if 0 <= phi_x < pi_1_2:
+        if x == 0 and y == 0:
+            phi_x0 = 0
+            phi_y0 = 0
+        if x < r and y*inv_factor >= 0:
             kx = 0
             ky = 0
             factor_x = 1
             factor_y = 1
         # second quadrant (pi/2 <= phi < pi)
-        elif pi_1_2 <= phi_x < pi:
+        # elif pi_1_2 <= phi_x < pi:
+        elif x >= r and y*inv_factor > 0:
             kx = 0
             ky = 1
             factor_x = 1
             factor_y = -1
         # third quadrant (pi <= phi < 3*pi/2)
-        elif pi <= phi_x < pi_3_2:
+        # elif pi <= phi_x < pi_3_2:
+        elif x > r and y*inv_factor <= 0:
             kx = 1
             ky = 1
             factor_x = -1
             factor_y = -1
         # fourth quadrant (3*pi/2 <= phi < pi_2)
-        elif pi_3_2 <= phi_x < pi_2:
+        # elif pi_3_2 <= phi_x < pi_2:
+        elif x <= r and y*inv_factor < 0:
             kx = 1
             ky = 2
             factor_x = -1
             factor_y = 1
 
         # negate y factor if counter-clockwise
-        if not is_cw:
-            factor_y *= -1
-
-        x += factor_x
-        y += factor_y
-        # Calculate phi for the next steps on the x, y axis
+        factor_y *= inv_factor
+        # init phi values if not yet done
+        if initial:
+            phi_x0 = factor_x * acos(float(-x+r)/r) + pi * 2 * kx
+            phi_y0 = factor_y * asin(float(y)/r) + pi * ky
+            initial = False
+        # if I and J is given, x and y will be asynchronous
+        # in order to synchronize, only one of the two can be incremented
+        x_dist = abs(x - r)
+        y_dist = r - abs(y)
+        xy_compare = inv_factor*(x_dist - y_dist)
+        #print(x_dist, y_dist)
+        # Depending on choice:
+        # Calculate phi for the next steps on x and/or y axis
         # taken into account periodicity as we need full 360 degrees
-        phi_x = factor_x * acos(float(-x+r)/r) + pi * 2 * kx
-        phi_y = factor_y * asin(float(y)/r) + pi * ky
         # Calculate delta t based on the following formulas:
         # Distance traveled on circular pathway:
         # delta_s = r * delta_phi
         # and the time required to do so
         # delta_t = delta_s / v
-        dtx = r_vx * (phi_x - phi_x0)
-        dty = r_vy * (phi_y - phi_y0)
-        phi_x0 = phi_x
-        phi_y0 = phi_y
-        ix.append((factor_x, dtx))
-        iy.append((factor_y, dty))
+        # append interval to ix and/or iy
+
+        if xy_compare < 0:
+            x += factor_x
+            phi_x = factor_x * acos(float(-x+r)/r) + pi * 2 * kx
+            dtx = r_vx * (phi_x - phi_x0)
+            ix.append((factor_x, dtx))
+            phi_x0 = phi_x
+
+        elif xy_compare > 0:
+            y += factor_y
+            phi_y = factor_y * asin(float(y)/r) + pi * ky
+            dty = r_vy * (phi_y - phi_y0)
+            iy.append((factor_y, dty))
+            phi_y0 = phi_y
+        else:
+            x += factor_x
+            phi_x = factor_x * acos(float(-x+r)/r) + pi * 2 * kx
+            dtx = r_vx * (phi_x - phi_x0)
+            ix.append((factor_x, dtx))
+            phi_x0 = phi_x
+
+            y += factor_y
+            phi_y = factor_y * asin(float(y)/r) + pi * ky
+            dty = r_vy * (phi_y - phi_y0)
+            iy.append((factor_y, dty))
+            phi_y0 = phi_y
+
+        #print(i, x, y, phi_x*180/pi, phi_y*180/pi)
 
         # Exit loop if endpoint is reached
-        if to_x or to_y:
-            if (x == to_x and y == to_y):
+        if x_end or y_end:
+            if (x == x_end and y == y_end):
                 break
 
     return ix, iy
@@ -370,34 +437,23 @@ class MotionPlanner(object):
     """
     A class containing all methods for CNC motion planning.
 
-    Attributes
-    ----------
-    logger: Logger
-        Logging object
-    sx: Stepper
-        X axis stepper
-    sy: Stepper
-        Y axis stepper
-    sz: Stepper
-        Z axis stepper
+    Attributes:
+        logger (Logger): Logging object
+        debug (bool): Enable debugging mode
     """
 
-    def __init__(self, sx, sy, sz, debug=False):
+    def __init__(self, debug=False):
         self.logger = logging.getLogger("MotionPlanner")
-        self._sx = sx
-        self._sy = sy
-        self._sz = sz
         self._debug = debug
 
-    def plan_move(self, x, y, z):
+    def plan_move(self, ds, v):
         """Plans rapid positioning move.
         In this mode the axes move at max speed
         to the desired position. Shorter vectors finish first.
 
         Parameters:
-            x (float): X axis end point of the arc
-            y (float): Y axis end point of the arc
-            z (float): Z axis end point of the arc
+            ds (tuple list): axis deltas in mm
+            v (tuple list): axis velocities in mm/min
 
         Returns:
             ix (list): Step timing intervals for X axis movement
@@ -405,86 +461,41 @@ class MotionPlanner(object):
             iz (list): Step timing intervals for Z axis movement
         """
 
-        sxa = cfg.STEPPER_X_STEP_ANGLE
-        sya = cfg.STEPPER_Y_STEP_ANGLE
-        sza = cfg.STEPPER_Z_STEP_ANGLE
+        steps = []
+        pps = []
+        for key, val in ds:
+            steps.append(_mm_to_steps_ax(key, val))
+        for key, val in v:
+            pps.append(_mm_per_min_to_pps_ax(key, val))
 
-        sxm = self._sx.get_mode()
-        sym = self._sy.get_mode()
-        szm = self._sz.get_mode()
+        return _plan_move(steps[0], steps[1], steps[2], pps[0], pps[1], pps[2])
 
-        axl = cfg.AXIS_LEAD_X
-        ayl = cfg.AXIS_LEAD_Y
-        azl = cfg.AXIS_LEAD_Z
-
-        axv = cfg.AXIS_TRAVERSAL_MM_PER_MIN_X
-        ayv = cfg.AXIS_TRAVERSAL_MM_PER_MIN_Y
-        azv = cfg.AXIS_TRAVERSAL_MM_PER_MIN_Z
-
-        steps_x = _mm_to_steps(x, sxa, sxm, axl)
-        steps_y = _mm_to_steps(y, sya, sym, ayl)
-        steps_z = _mm_to_steps(z, sza, szm, azl)
-        pps_x = _mm_per_min_to_pps(axv, sxa, sxm, axl)
-        pps_y = _mm_per_min_to_pps(ayv, sya, sym, ayl)
-        pps_z = _mm_per_min_to_pps(azv, sza, szm, azl)
-        return _plan_move(steps_x, steps_y, steps_z, pps_x, pps_y, pps_z)
-
-    def plan_interpolated_line(self, x, y, z, feed_rate, plane="XY"):
+    def plan_interpolated_line(self, ds, v):
         """Plans linear interpolation movement on specified plane.
         The axis movements will be synchronized using the defined
         feed rate. All vectors finish at the same time.
 
         Parameters:
-            x (float): X axis end point of the arc
-            y (float): Y axis end point of the arc
-            z (float): Z axis end point of the arc
-            feed_rate (float): Feed rate of interpolated movement
-            plane (str): Plane for the movement(XY, XZ or YZ)
+            ds (tuple list): axis deltas in mm
+            v (float): Feed rate of interpolated movement in mm/min
 
         Returns:
-            ix (list): Step timing intervals for X axis movement (only for planes: XY, XZ)
-            iy (list): Step timing intervals for Y axis movement (only for planes: XY, YZ)
-            iz (list): Step timing intervals for Z axis movement (only for planes: XZ, YZ)
+            ia (list): Step timing intervals for first planar axis movement
+            ib (list): Step timing intervals for second planar axis movement
         """
 
-        sxa = cfg.STEPPER_X_STEP_ANGLE
-        sya = cfg.STEPPER_Y_STEP_ANGLE
-        sza = cfg.STEPPER_Z_STEP_ANGLE
+        s = math.sqrt(ds[0][1]*ds[0][1] + ds[1][1]*ds[1][1])
+        ti = s / v
 
-        sxm = self._sx.get_mode()
-        sym = self._sy.get_mode()
-        szm = self._sz.get_mode()
+        steps = []
+        pps = []
+        for key, val in ds:
+            steps.append(_mm_to_steps_ax(key, val))
+            pps.append(_mm_per_min_to_pps_ax(key, abs(val) / ti))
 
-        axl = cfg.AXIS_LEAD_X
-        ayl = cfg.AXIS_LEAD_Y
-        azl = cfg.AXIS_LEAD_Z
+        return _plan_interpolated_line(steps[0], steps[1], pps[0], pps[1])
 
-        steps_x = _mm_to_steps(x, sxa, sxm, axl)
-        steps_y = _mm_to_steps(y, sya, sym, ayl)
-        steps_z = _mm_to_steps(z, sza, szm, azl)
-
-        if plane == "XY":
-            xy = math.sqrt(abs(x)**2 + abs(y)**2)
-            ti = xy / feed_rate
-            pps_x = _mm_per_min_to_pps(abs(x) / ti, sxa, sxm, axl)
-            pps_y = _mm_per_min_to_pps(abs(y) / ti, sxa, sxm, axl)
-            return _plan_interpolated_line_constant(steps_x, steps_y, pps_x, pps_y)
-        elif plane == "XZ":
-            xz = math.sqrt(abs(x)**2 + abs(z)**2)
-            ti = xz / feed_rate
-            pps_x = _mm_per_min_to_pps(abs(x) / ti, sxa, sxm, axl)
-            pps_z = _mm_per_min_to_pps(abs(z) / ti, sza, szm, azl)
-            return _plan_interpolated_line_constant(steps_x, steps_z, pps_x, pps_z)
-        elif plane == "YZ":
-            yz = math.sqrt(abs(y)**2 + abs(z)**2)
-            ti = yz / feed_rate
-            pps_y = _mm_per_min_to_pps(abs(y) / ti, sya, sym, ayl)
-            pps_z = _mm_per_min_to_pps(abs(z) / ti, sza, szm, azl)
-            return _plan_interpolated_line_constant(steps_y, steps_z, pps_y, pps_z)
-        else:
-            return None
-
-    def plan_interpolated_arc(self, r, x, y, feed_rate, is_cw, plane="XY"):
+    def plan_interpolated_arc(self, r, ds, de, v, is_cw):
         """Plans circular interpolation movement on specified plane.
         The movement will be synchronized on selected plane till
         either a defined end point or the start of the
@@ -492,45 +503,24 @@ class MotionPlanner(object):
 
         Parameters:
             r (float): the radius of the arc
-            x (float): X axis end point of the arc
-            y (float): Y axis end point of the arc
-            feed_rate (float): Feed rate of interpolated movement
+            ds (tuple list): axis starting points in mm
+            de (tuple list): axis end points in mm
+            v (float): Feed rate of interpolated movement
             is_cw (bool): Is direction clockwise
-            plane (str): Plane for the movement(XY, XZ or YZ)
 
         Returns:
-            ix (list): Step timing intervals for X axis movement (only for planes: XY, XZ)
-            iy (list): Step timing intervals for Y axis movement (only for planes: XY, YZ)
-            iz (list): Step timing intervals for Z axis movement (only for planes: XZ, YZ)
+            ia (list): Step timing intervals for first planar axis movement
+            ib (list): Step timing intervals for second planar axis movement
         """
-
-        sxa = cfg.STEPPER_X_STEP_ANGLE
-        sya = cfg.STEPPER_Y_STEP_ANGLE
-        sza = cfg.STEPPER_Z_STEP_ANGLE
-
-        sxm = self._sx.get_mode()
-        sym = self._sy.get_mode()
-        szm = self._sz.get_mode()
-
-        axl = cfg.AXIS_LEAD_X
-        ayl = cfg.AXIS_LEAD_Y
-        azl = cfg.AXIS_LEAD_Z
-
-        steps_r = _mm_to_steps(r, sxa, sxm, axl)
-        steps_x = _mm_to_steps(x, sxa, sxm, axl)
-        steps_y = _mm_to_steps(y, sya, sym, ayl)
-
-        if plane == "XY":
-            pps_x = _mm_per_min_to_pps(feed_rate, sxa, sxm, axl)
-            pps_y = _mm_per_min_to_pps(feed_rate, sya, sym, ayl)
-            return _plan_interpolated_arc(steps_r, steps_x, steps_y, pps_x, pps_y, is_cw)
-        elif plane == "XZ":
-            pps_x = _mm_per_min_to_pps(feed_rate, sxa, sxm, axl)
-            pps_z = _mm_per_min_to_pps(feed_rate, sza, szm, azl)
-            return _plan_interpolated_arc(steps_r, steps_x, steps_y, pps_x, pps_z, is_cw)
-        elif plane == "YZ":
-            pps_y = _mm_per_min_to_pps(feed_rate, sya, sym, ayl)
-            pps_z = _mm_per_min_to_pps(feed_rate, sza, szm, azl)
-            return _plan_interpolated_arc(steps_r, steps_x, steps_y, pps_y, pps_z, is_cw)
+        steps = []
+        pps = []
+        for key, val in ds:
+            steps.append(_mm_to_steps_ax(key, val))
+            pps.append(_mm_per_min_to_pps_ax(key, v))
+        for key, val in de:
+            steps.append(_mm_to_steps_ax(key, val))
+        if steps[0] or steps[1]:
+            steps_r = math.sqrt(steps[0]*steps[0]+steps[1]*steps[1])
         else:
-            return None
+            steps_r = _mm_to_steps_ax(ds[0][0], r)
+        return _plan_interpolated_arc(steps_r, steps[0], steps[1], steps[2], steps[3], pps[0], pps[1], is_cw)
