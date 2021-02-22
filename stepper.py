@@ -8,7 +8,7 @@ import threading
 import time
 
 # Uncomment for testing
-# import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 
 import config as cfg
 
@@ -52,11 +52,11 @@ class Stepper(object):
 
     def _configure(self):
         """Confgures motor for movement."""
-        GPIO.setmode(GPIO.BOARD)
+        GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
         GPIO.setup(list(self._gpios.values()), GPIO.OUT)
         GPIO.output(list(self._gpios.values()), False)
-        self.set_mode(self._mode, initial=True)
+#        self.set_mode(self._mode, initial=True)
         self.set_direction(self._direction, initial=True)
 
     def enable(self):
@@ -131,32 +131,33 @@ def main():
     parser.add_argument("-s", "--steps", dest="steps", type=int,
                         help="Specify number of steps for the motor to move", default=1)
     parser.add_argument("-m", "--mode", dest="mode",
-                        type=int, help="Specify microstepping mode")
+                        type=int, help="Specify microstepping mode", default=8)
     parser.add_argument("-d", "--direction", dest="direction",
                         choices=["CW", "CCW"], help="Specify direction of movement")
     args = parser.parse_args()
 
     s = Stepper(
         args.name,
+        args.mode,
         debug=False
     )
 
     s.enable()
 
-    if args.mode:
-        s.set_mode(args.mode)
+#    if args.mode:
+#        s.set_mode(args.mode)
 
     if args.direction:
         s.set_direction(args.direction)
 
     interval = [
-        (1, 0.05) if args.direction == "CW" else (-1, 0.05) for step in range(args.steps)
+        (1, 0.01) if args.direction == "CW" else (-1, 0.01) for step in range(args.steps)
     ]
 
     s.step(interval)
 
     s.disable()
-    GPIO.output(list(s.gpios.values()), False)
+    GPIO.output(list(s._gpios.values()), False)
     GPIO.cleanup()
 
 

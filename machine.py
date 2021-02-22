@@ -63,7 +63,7 @@ class Machine(object):
             vz = cfg.AXIS_TRAVERSAL_MM_PER_MIN_Z
             ds = (("x", dx), ("y", dy), ("z", dz))
             v = (("x", vx), ("y", vy), ("z", vz))
-            ix, iy, iz = self.mp.plan_move(delta, v)
+            ix, iy, iz = self.mp.plan_move(ds, v)
 
         # Linear interpolation
         elif g == "01":

@@ -14,8 +14,8 @@ STEPPER_STEP_ANGLE_Y = 1.8
 STEPPER_STEP_ANGLE_Z = 1.8
 
 # Define stepper modes
-STEPPER_MODE_X = 2
-STEPPER_MODE_Y = 2
+STEPPER_MODE_X = 8
+STEPPER_MODE_Y = 8
 STEPPER_MODE_Z = 8
 
 AXIS_LEAD_X = 5
@@ -23,9 +23,9 @@ AXIS_LEAD_Y = 5
 AXIS_LEAD_Z = 5
 
 # Define axis speeds in mm/min
-AXIS_TRAVERSAL_MM_PER_MIN_X = 3750.0
-AXIS_TRAVERSAL_MM_PER_MIN_Y = 3750.0
-AXIS_TRAVERSAL_MM_PER_MIN_Z = 3750.0
+AXIS_TRAVERSAL_MM_PER_MIN_X = 2000.0
+AXIS_TRAVERSAL_MM_PER_MIN_Y = 2000.0
+AXIS_TRAVERSAL_MM_PER_MIN_Z = 2000.0
 
 AXIS_FEED_MM_PER_MIN_X = 1200.0
 AXIS_FEED_MM_PER_MIN_Y = 1200.0
@@ -56,48 +56,36 @@ steppers = {
         "driver": "DRV8825",
         "direction": "CW",
         "gpios": {
-            "dir": 16,       # DIR
-            "step": 18,      # STEP
-            "sleep": 31,     # SLEEP
-            "m0": 11,        # M0
-            "m1": 13,        # M1
-            "m2": 15,        # M2
+            "dir": 10,       # DIR
+            "step": 17,      # STEP
+            "sleep": 23,     # SLEEP
         },
     },
     "X": {
         "driver": "DRV8825",
         "direction": "CW",
         "gpios": {
-            "dir": 16,       # DIR
-            "step": 18,      # STEP
-            "sleep": 31,     # SLEEP
-            "m0": 11,        # M0
-            "m1": 13,        # M1
-            "m2": 15,        # M2
+            "dir": 10,       # DIR
+            "step": 17,      # STEP
+            "sleep": 23,     # SLEEP
         },
     },
     "Y": {
         "driver": "DRV8825",
         "direction": "CW",
         "gpios": {
-            "dir": 8,       # DIR
-            "step": 10,     # STEP
-            "sleep": 29,    # SLEEP
-            "m0": 3,        # M0
-            "m1": 5,        # M1
-            "m2": 7,        # M2
+            "dir": 9,       # DIR
+            "step": 27,     # STEP
+            "sleep": 23,    # SLEEP
         },
     },
     "Z": {
         "driver": "DRV8825",
         "direction": "CW",
         "gpios": {
-            "dir": 38,       # DIR
-            "step": 40,      # STEP
-            "sleep": 32,     # SLEEP
-            "m0": 33,        # M0
-            "m1": 35,        # M1
-            "m2": 37,        # M2
+            "dir": 11,       # DIR
+            "step": 22,      # STEP
+            "sleep": 23,     # SLEEP
         },
     },
 }
