@@ -63,7 +63,7 @@ def _configure_ramp_trapezoidal(vm, mode, step_angle, lead, accel):
     # [rotation_angle = 2 * PI / SPR]
     angle = 2 * pi / spr
     # Convert target velocity from mm/min to rad/s
-    w = vm / 60 * steps_per_mm * angle
+    w = vm / 60.0 * steps_per_mm * angle
     # Convert acceleration from mm/s^2 to rad/s^2
     a = accel * steps_per_mm * angle
     # Calculation of number of steps needed to accelerate/decelerate
