@@ -6,7 +6,7 @@ class GCode(object):
         """String representation of parameter dictionary."""
         string_repr = ""
         for key in ("N", "G", "X", "Y", "Z", "I", "J", "R"):
-            val = key + self._params[key] + " " if self.get(key) else ""
+            val = key + self._params[key] + " " if self.get(key) is not None else ""
             string_repr += val
         return string_repr.strip()
 

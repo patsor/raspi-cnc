@@ -132,6 +132,7 @@ def main():
                         help="Specify number of steps for the motor to move", default=1)
     parser.add_argument("-m", "--mode", dest="mode",
                         type=int, help="Specify microstepping mode", default=8)
+    parser.add_argument("-f", "--frequency", dest="freq", type=int, help="Specify step frequency in Hz", default=100)
     parser.add_argument("-d", "--direction", dest="direction",
                         choices=["CW", "CCW"], help="Specify direction of movement")
     args = parser.parse_args()
@@ -150,8 +151,13 @@ def main():
     if args.direction:
         s.set_direction(args.direction)
 
+    dt = 1.0 / args.freq
+    rpm = args.freq / (args.mode * 200.0) * 60.0
+
+    print("RPM: {}".format(rpm))
+    
     interval = [
-        (1, 0.01) if args.direction == "CW" else (-1, 0.01) for step in range(args.steps)
+        (1, dt) if args.direction == "CW" else (-1, dt) for step in range(args.steps)
     ]
 
     s.step(interval)

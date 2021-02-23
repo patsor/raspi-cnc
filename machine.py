@@ -55,9 +55,9 @@ class Machine(object):
             y = gcode.get("Y")
             z = gcode.get("Z")
             # Calculate axis deltas
-            dx = x - self._coordinates["X"] if x else 0
-            dy = y - self._coordinates["Y"] if y else 0
-            dz = z - self._coordinates["Z"] if z else 0
+            dx = x - self._coordinates["X"] if x is not None else 0
+            dy = y - self._coordinates["Y"] if y is not None else 0
+            dz = z - self._coordinates["Z"] if z is not None else 0
             vx = cfg.AXIS_TRAVERSAL_MM_PER_MIN_X
             vy = cfg.AXIS_TRAVERSAL_MM_PER_MIN_Y
             vz = cfg.AXIS_TRAVERSAL_MM_PER_MIN_Z
@@ -72,9 +72,9 @@ class Machine(object):
             y = gcode.get("Y")
             z = gcode.get("Z")
             # Calculate axis deltas
-            dx = x - self._coordinates["X"] if x else 0
-            dy = y - self._coordinates["Y"] if y else 0
-            dz = z - self._coordinates["Z"] if z else 0
+            dx = x - self._coordinates["X"] if x is not None else 0
+            dy = y - self._coordinates["Y"] if y is not None else 0
+            dz = z - self._coordinates["Z"] if z is not None else 0
             feed_rate = float(f) if f else cfg.AXIS_FEED_MM_PER_MIN_X
 
             if x and y and not z:
@@ -100,9 +100,9 @@ class Machine(object):
             y = gcode.get("Y")
             z = gcode.get("Z")
             # Calculate axis deltas
-            dx = x - self._coordinates["X"] if x else 0
-            dy = y - self._coordinates["Y"] if y else 0
-            dz = z - self._coordinates["Z"] if z else 0
+            dx = x - self._coordinates["X"] if x is not None else 0
+            dy = y - self._coordinates["Y"] if y is not None else 0
+            dz = z - self._coordinates["Z"] if z is not None else 0
 
             cw = True if g == "02" else False
             feed_rate = float(f) if f else cfg.AXIS_FEED_MM_PER_MIN_X

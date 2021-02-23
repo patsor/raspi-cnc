@@ -99,7 +99,9 @@ def _configure_ramp_sigmoidal(vm, mode, step_angle, lead, accel):
     Returns:
         c (list): Step timing intervals for each step during acceleration
     """
-
+    if not vm:
+        return None
+    
     e = math.e
     log = math.log
     pi = math.pi
@@ -112,7 +114,7 @@ def _configure_ramp_sigmoidal(vm, mode, step_angle, lead, accel):
     # [rotation_angle = 2 * PI / SPR]
     angle = 2 * pi / spr
     # Convert target velocity from mm/min to rad/s
-    w = vm / 60 * steps_per_mm * angle
+    w = vm / 60.0 * steps_per_mm * angle
     # Convert acceleration from mm/s^2 to rad/s^2
     a = accel * steps_per_mm * angle
     ti = 0.4
@@ -229,6 +231,21 @@ def _configure_ramp_polynomial(vm, mode, step_angle, lead, accel):
     return c
 
 
+def _overlay_ramp(steps, ramp, sign):
+    intervals = []
+    steps_2 = steps / 2
+    ramp_size = len(ramp)
+    for i in range(steps):
+        if i < ramp_size and i < steps_2:
+            intervals.append((sign, ramp[i]))
+        elif i >= steps_2 and i >= steps - ramp_size:
+            intervals.append((sign, ramp[steps-i-1]))
+        else:
+            intervals.append((sign, ramp[-1]))
+
+    return intervals
+
+
 def _plan_move(x, y, z, vx, vy, vz):
     """Generates pulses for rapid positioning movement.
     Returns tuples vector with pulse direction(1 | -1) and
@@ -248,15 +265,24 @@ def _plan_move(x, y, z, vx, vy, vz):
         iz (list): Step timing intervals for Z axis movement
     """
 
+    ramp_x = _configure_ramp_sigmoidal(vx, cfg.STEPPER_MODE_X, cfg.STEPPER_STEP_ANGLE_X, cfg.AXIS_LEAD_X, cfg.AXIS_ACCELERATION_X)
+    ramp_y = _configure_ramp_sigmoidal(vy, cfg.STEPPER_MODE_Y, cfg.STEPPER_STEP_ANGLE_Y, cfg.AXIS_LEAD_Y, cfg.AXIS_ACCELERATION_Y)
+    ramp_z = _configure_ramp_sigmoidal(vz, cfg.STEPPER_MODE_Z, cfg.STEPPER_STEP_ANGLE_Z, cfg.AXIS_LEAD_Z, cfg.AXIS_ACCELERATION_Z)
+    
     # Get signs of distance vector
     sign_x = 1 if x >= 0 else -1
     sign_y = 1 if y >= 0 else -1
     sign_z = 1 if z >= 0 else -1
 
     # Generate intervals for stepper based on velocity
-    ix = [(sign_x, 1 / vx)] * abs(x)
-    iy = [(sign_y, 1 / vy)] * abs(y)
-    iz = [(sign_z, 1 / vz)] * abs(z)
+    ix = _overlay_ramp(abs(x), ramp_x, sign_x)
+    iy = _overlay_ramp(abs(y), ramp_y, sign_y)
+    iz = _overlay_ramp(abs(z), ramp_z, sign_z)
+
+    
+    #ix = [(sign_x, 1 / vx)] * abs(x)
+    #iy = [(sign_y, 1 / vy)] * abs(y)
+    #iz = [(sign_z, 1 / vz)] * abs(z)
 
     return ix, iy, iz
 
@@ -282,8 +308,8 @@ def _plan_interpolated_line(x, y, vx, vy):
     sign_y = 1 if y >= 0 else -1
 
     # Generate intervals for stepper based on velocity
-    ix = [(sign_x, 1 / vx)] * abs(x)
-    iy = [(sign_y, 1 / vy)] * abs(y)
+    ix = [(sign_x, 1.0 / vx)] * abs(x)
+    iy = [(sign_y, 1.0 / vy)] * abs(y)
 
     return ix, iy
 

@@ -74,7 +74,7 @@ class GCodeParser(object):
                     limits = cfg.AXIS_LIMITS_Y
                 elif key == "Z":
                     limits = cfg.AXIS_LIMITS_Z
-                if float(val) < limits[0] or float(val) > limits[1]:
+                if not limits[0] <= float(val) <= limits[1]:
                     raise GCodeOutOfBoundsError(
                         line, "GCode out of bounds")
 

@@ -58,34 +58,34 @@ steppers = {
         "gpios": {
             "dir": 10,       # DIR
             "step": 17,      # STEP
-            "sleep": 23,     # SLEEP
+            "sleep": 1,     # SLEEP
         },
     },
     "X": {
         "driver": "DRV8825",
         "direction": "CW",
         "gpios": {
-            "dir": 10,       # DIR
+            "dir": 23,       # DIR
             "step": 17,      # STEP
-            "sleep": 23,     # SLEEP
+            "sleep": 1,     # SLEEP
         },
     },
     "Y": {
         "driver": "DRV8825",
         "direction": "CW",
         "gpios": {
-            "dir": 9,       # DIR
+            "dir": 24,       # DIR
             "step": 27,     # STEP
-            "sleep": 23,    # SLEEP
+            "sleep": 1,    # SLEEP
         },
     },
     "Z": {
         "driver": "DRV8825",
         "direction": "CW",
         "gpios": {
-            "dir": 11,       # DIR
+            "dir": 25,       # DIR
             "step": 22,      # STEP
-            "sleep": 23,     # SLEEP
+            "sleep": 1,     # SLEEP
         },
     },
 }
@@ -132,5 +132,22 @@ drivers = {
             128: (0, 1, 1, 1),
             256: (1, 0, 0, 0),
         },
+    },
+    "DM556T": {
+        # Microstepping modes of DM556T
+        # This dictionary is just for the sake of completeness
+        # as the user can only manually select microstepping mode
+        # directly on the module through DIP switches
+        # Microstep: (SW5, SW6, SW7, SW8) (1: on, 0: off)
+        "modes": {
+            1: (1, 1, 1, 1),
+            2: (0, 1, 1, 1),
+            4: (1, 0, 1, 1),
+            8: (0, 0, 1, 1),
+            16: (1, 1, 0, 1),
+            32: (0, 1, 0, 1),
+            64: (1, 0, 0, 1),
+            128: (0, 0, 0, 1)
+        }
     }
 }
